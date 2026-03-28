@@ -1,41 +1,80 @@
+using System.Text.Json;
+using Changeset;
+using Changeset.Validators;
+
 var builder = WebApplication.CreateBuilder(args);
-
-// Add services to the container.
-// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
-builder.Services.AddOpenApi();
-
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
-{
-    app.MapOpenApi();
-}
+// In-memory "database"
+var users = new List<User>();
+var nextId = 1;
 
-app.UseHttpsRedirection();
-
-var summaries = new[]
+app.MapPost("/users", (JsonElement body) =>
 {
-    "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
-};
+    var @params = JsonSerializer.Deserialize<Dictionary<string, object?>>(body.GetRawText())
+        ?? new Dictionary<string, object?>();
 
-app.MapGet("/weatherforecast", () =>
+    var cs = Changeset.Changeset.Cast<User>(@params, ["Name", "Email", "Age"])
+        .ValidateRequired(["Name", "Email"])
+        .ValidateFormat("Email", @"^[^@]+@[^@]+\.[^@]+$")
+        .ValidateLength("Name", min: 2, max: 100)
+        .ValidateNumber("Age", greaterThanOrEqual: 0, lessThan: 150);
+
+    if (!cs.IsValid)
+        return Results.ValidationProblem(
+            cs.ErrorMap.ToDictionary(
+                kvp => kvp.Key,
+                kvp => kvp.Value.Select(e => e.Message).ToArray()));
+
+    var user = cs.ApplyChanges();
+    user.Id = nextId++;
+    users.Add(user);
+
+    return Results.Created($"/users/{user.Id}", user);
+});
+
+app.MapPut("/users/{id:int}", (int id, JsonElement body) =>
 {
-    var forecast =  Enumerable.Range(1, 5).Select(index =>
-        new WeatherForecast
-        (
-            DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
-            Random.Shared.Next(-20, 55),
-            summaries[Random.Shared.Next(summaries.Length)]
-        ))
-        .ToArray();
-    return forecast;
-})
-.WithName("GetWeatherForecast");
+    var existing = users.FirstOrDefault(u => u.Id == id);
+    if (existing is null)
+        return Results.NotFound();
+
+    var @params = JsonSerializer.Deserialize<Dictionary<string, object?>>(body.GetRawText())
+        ?? new Dictionary<string, object?>();
+
+    var cs = Changeset.Changeset.Cast(existing, @params, ["Name", "Email", "Age"])
+        .ValidateRequired(["Name", "Email"])
+        .ValidateFormat("Email", @"^[^@]+@[^@]+\.[^@]+$")
+        .ValidateLength("Name", min: 2, max: 100)
+        .ValidateNumber("Age", greaterThanOrEqual: 0, lessThan: 150);
+
+    if (!cs.IsValid)
+        return Results.ValidationProblem(
+            cs.ErrorMap.ToDictionary(
+                kvp => kvp.Key,
+                kvp => kvp.Value.Select(e => e.Message).ToArray()));
+
+    var updated = cs.ApplyChanges();
+    updated.Id = id;
+    var index = users.FindIndex(u => u.Id == id);
+    users[index] = updated;
+
+    return Results.Ok(updated);
+});
+
+app.MapGet("/users", () => users);
+app.MapGet("/users/{id:int}", (int id) =>
+{
+    var user = users.FirstOrDefault(u => u.Id == id);
+    return user is not null ? Results.Ok(user) : Results.NotFound();
+});
 
 app.Run();
 
-record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
+public class User
 {
-    public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
+    public int Id { get; set; }
+    public string Name { get; set; } = "";
+    public string Email { get; set; } = "";
+    public int Age { get; set; }
 }
