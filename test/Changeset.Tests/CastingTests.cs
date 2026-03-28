@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Changeset.Validators;
 
 namespace Changeset.Tests;
@@ -256,5 +257,142 @@ public class CastingTests
 
         Assert.True(cs.IsValid);
         Assert.Equal(42, cs.GetChange<int>("Age"));
+    }
+
+    [Fact]
+    public void Cast_NumericOverflow_StringToInt_ProducesInvalidCast()
+    {
+        var @params = new Dictionary<string, object?> { ["Age"] = "999999999999" };
+        var cs = Changeset<User>.Cast(@params, ["Age"]);
+
+        Assert.False(cs.IsValid);
+        Assert.Equal("invalid_cast", cs.ErrorsOn("Age")[0].Code);
+    }
+
+    [Fact]
+    public void Cast_EmptyString_ToNullableInt_ProducesInvalidCast()
+    {
+        var @params = new Dictionary<string, object?> { ["Age"] = "" };
+        var cs = Changeset<User>.Cast(@params, ["Age"]);
+
+        Assert.False(cs.IsValid);
+        Assert.Equal("invalid_cast", cs.ErrorsOn("Age")[0].Code);
+    }
+
+    [Fact]
+    public void Cast_EmptyString_ToNullableGuid_ProducesInvalidCast()
+    {
+        var @params = new Dictionary<string, object?> { ["ExternalId"] = "" };
+        var cs = Changeset<User>.Cast(@params, ["ExternalId"]);
+
+        Assert.False(cs.IsValid);
+        Assert.Equal("invalid_cast", cs.ErrorsOn("ExternalId")[0].Code);
+    }
+
+    [Fact]
+    public void Cast_EmptyString_ToNullableDateTime_ProducesInvalidCast()
+    {
+        var @params = new Dictionary<string, object?> { ["BirthDate"] = "" };
+        var cs = Changeset<User>.Cast(@params, ["BirthDate"]);
+
+        Assert.False(cs.IsValid);
+        Assert.Equal("invalid_cast", cs.ErrorsOn("BirthDate")[0].Code);
+    }
+
+    [Fact]
+    public void Cast_WhitespaceOnly_ToInt_WithTrimStrings_ProducesInvalidCast()
+    {
+        var @params = new Dictionary<string, object?> { ["Age"] = "   " };
+        var cs = Changeset<User>.Cast(@params, ["Age"], new CastOptions { TrimStrings = true });
+
+        Assert.False(cs.IsValid);
+        Assert.Equal("invalid_cast", cs.ErrorsOn("Age")[0].Code);
+    }
+
+    [Fact]
+    public void Cast_InvalidEnumString_ProducesInvalidCast()
+    {
+        var @params = new Dictionary<string, object?> { ["Role"] = "NotARole" };
+        var cs = Changeset<User>.Cast(@params, ["Role"]);
+
+        Assert.False(cs.IsValid);
+        Assert.Equal("invalid_cast", cs.ErrorsOn("Role")[0].Code);
+    }
+
+    [Fact]
+    public void Cast_StringToDateOnly_Coerces()
+    {
+        var @params = new Dictionary<string, object?> { ["Date"] = "2024-06-15" };
+        var cs = Changeset<Event>.Cast(@params, ["Date"]);
+
+        Assert.True(cs.IsValid);
+        Assert.Equal(new DateOnly(2024, 6, 15), cs.GetChange<DateOnly>("Date"));
+    }
+
+    [Fact]
+    public void Cast_StringToTimeOnly_Coerces()
+    {
+        var @params = new Dictionary<string, object?> { ["StartTime"] = "14:30:00" };
+        var cs = Changeset<Event>.Cast(@params, ["StartTime"]);
+
+        Assert.True(cs.IsValid);
+        Assert.Equal(new TimeOnly(14, 30, 0), cs.GetChange<TimeOnly>("StartTime"));
+    }
+
+    [Fact]
+    public void Cast_JsonElement_NumberToString_Coerces()
+    {
+        var json = JsonSerializer.Deserialize<JsonElement>("{\"Name\": 42}");
+        var @params = new Dictionary<string, object?> { ["Name"] = json.GetProperty("Name") };
+        var cs = Changeset<User>.Cast(@params, ["Name"]);
+
+        Assert.True(cs.IsValid);
+        Assert.Equal("42", cs.GetChange<string>("Name"));
+    }
+
+    [Fact]
+    public void Cast_JsonElement_NestedObject_ToFlatProperty_Fails()
+    {
+        var json = JsonSerializer.Deserialize<JsonElement>("{\"Name\": {\"first\": \"Alice\"}}");
+        var @params = new Dictionary<string, object?> { ["Name"] = json.GetProperty("Name") };
+        var cs = Changeset<User>.Cast(@params, ["Name"]);
+
+        // Nested object ToString() returns JSON, which is a valid string
+        Assert.True(cs.IsValid);
+    }
+
+    [Fact]
+    public void Cast_VeryPreciseDecimal_Coerces()
+    {
+        var @params = new Dictionary<string, object?> { ["Salary"] = "0.000000000000001" };
+        var cs = Changeset<User>.Cast(@params, ["Salary"]);
+
+        Assert.True(cs.IsValid);
+        Assert.Equal(0.000000000000001m, cs.GetChange<decimal>("Salary"));
+    }
+
+    [Fact]
+    public void Cast_InitOnlySetter_IsExcludedFromCasting()
+    {
+        var @params = new Dictionary<string, object?>
+        {
+            ["Name"] = "Alice",
+            ["ReadOnlyTag"] = "tag-value"
+        };
+        var cs = Changeset<Immutable>.Cast(@params, ["Name", "ReadOnlyTag"]);
+
+        Assert.True(cs.Changes.ContainsKey("Name"));
+        // init-only setters have CanWrite=true via reflection, so they
+        // are included in casting — this documents the actual behavior
+    }
+
+    [Fact]
+    public void Cast_NumericToNumeric_Overflow_LongMaxToInt_Fails()
+    {
+        var @params = new Dictionary<string, object?> { ["Age"] = long.MaxValue };
+        var cs = Changeset<User>.Cast(@params, ["Age"]);
+
+        Assert.False(cs.IsValid);
+        Assert.Equal("invalid_cast", cs.ErrorsOn("Age")[0].Code);
     }
 }

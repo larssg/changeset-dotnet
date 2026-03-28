@@ -208,4 +208,67 @@ public class AssocTests
         var cs = Changeset<UserWithAddress>.Cast(@params, ["Name"]);
         Assert.Null(cs.GetAssoc<UserWithAddress, Address>("Address"));
     }
+
+    [Fact]
+    public void CastAssoc_EmptyDictionary_CreatesChildWithNoChanges()
+    {
+        var @params = new Dictionary<string, object?>
+        {
+            ["Name"] = "Alice",
+            ["Address"] = new Dictionary<string, object?>()
+        };
+
+        var cs = Changeset<UserWithAddress>.Cast(@params, ["Name"])
+            .CastAssoc<UserWithAddress, Address>("Address", ["Street", "City"]);
+
+        Assert.True(cs.IsValid);
+        var childCs = cs.GetAssoc<UserWithAddress, Address>("Address");
+        Assert.NotNull(childCs);
+        Assert.Empty(childCs!.Changes);
+    }
+
+    [Fact]
+    public void ValidateAssoc_ErrorPrefix_StacksOnAlreadyInvalidChild()
+    {
+        var @params = new Dictionary<string, object?>
+        {
+            ["Name"] = "Alice",
+            ["Address"] = new Dictionary<string, object?>
+            {
+                ["Zip"] = "not-a-zip"
+            }
+        };
+
+        // Cast with strict to get a cast error, then validate to add more errors
+        var cs = Changeset<UserWithAddress>.Cast(@params, ["Name"])
+            .CastAssoc<UserWithAddress, Address>("Address", ["Street", "City", "Zip"])
+            .ValidateAssoc<UserWithAddress, Address>("Address", addressCs =>
+                addressCs.ValidateRequired(["Street", "City"]));
+
+        Assert.False(cs.IsValid);
+        Assert.True(cs.HasErrorOn("Address.Street"));
+        Assert.True(cs.HasErrorOn("Address.City"));
+    }
+
+    [Fact]
+    public void CastAssoc_DeeplyNested_DotNotationChains()
+    {
+        var @params = new Dictionary<string, object?>
+        {
+            ["Id"] = "order-1",
+            ["Address"] = new Dictionary<string, object?>
+            {
+                ["City"] = ""
+            }
+        };
+
+        var cs = Changeset<Order>.Cast(@params, ["Id"])
+            .CastAssoc<Order, Address>("Address", ["Street", "City", "Zip"])
+            .ValidateAssoc<Order, Address>("Address", addressCs =>
+                addressCs.ValidateRequired(["City"]));
+
+        Assert.False(cs.IsValid);
+        Assert.True(cs.HasErrorOn("Address.City"));
+        Assert.Equal("required", cs.ErrorsOn("Address.City")[0].Code);
+    }
 }

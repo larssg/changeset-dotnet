@@ -26,6 +26,25 @@ public class UserWithAddress
     public Address? Address { get; set; }
 }
 
+public class Event
+{
+    public string Name { get; set; } = "";
+    public DateOnly? Date { get; set; }
+    public TimeOnly? StartTime { get; set; }
+}
+
+public class Immutable
+{
+    public string Name { get; set; } = "";
+    public string ReadOnlyTag { get; init; } = "";
+}
+
+public class Order
+{
+    public string Id { get; set; } = "";
+    public Address? Address { get; set; }
+}
+
 public enum UserRole
 {
     Guest,

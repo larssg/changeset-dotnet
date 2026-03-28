@@ -139,4 +139,49 @@ public class ApplyChangesTests
         Assert.True(cs.HasErrorOn("Email"));
         Assert.True(cs.HasErrorOn("Age"));
     }
+
+    [Fact]
+    public void ApplyChanges_WithFactory_Update_IgnoresFactory()
+    {
+        var existing = new User
+        {
+            Name = "Bob",
+            Email = "bob@example.com",
+            Age = 25,
+            IsActive = false
+        };
+
+        var @params = new Dictionary<string, object?> { ["Name"] = "Robert" };
+        var cs = Changeset<User>.Cast(existing, @params, ["Name"]);
+
+        // Factory sets IsActive=true, but update mode should ignore the factory
+        var updated = cs.ApplyChanges(() => new User { IsActive = true });
+
+        Assert.Equal("Robert", updated.Name);
+        Assert.False(updated.IsActive); // preserved from existing, factory not used
+        Assert.Equal("bob@example.com", updated.Email);
+    }
+
+    [Fact]
+    public void ToResult_Valid_ReturnsValidWithCorrectlyAppliedValues()
+    {
+        var @params = new Dictionary<string, object?>
+        {
+            ["Name"] = "Alice",
+            ["Email"] = "alice@example.com",
+            ["Age"] = "30",
+            ["IsActive"] = "true"
+        };
+
+        var result = Changeset<User>.Cast(@params, ["Name", "Email", "Age", "IsActive"])
+            .ValidateRequired(["Name", "Email"])
+            .ToResult();
+
+        Assert.IsType<ChangesetResult<User>.Valid>(result);
+        var user = ((ChangesetResult<User>.Valid)result).Value;
+        Assert.Equal("Alice", user.Name);
+        Assert.Equal("alice@example.com", user.Email);
+        Assert.Equal(30, user.Age);
+        Assert.True(user.IsActive);
+    }
 }
