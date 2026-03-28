@@ -15,11 +15,11 @@ public class ChangesetGenerator : IIncrementalGenerator
 
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
-        // Find all classes decorated with [ChangesetTarget]
+        // Find all classes and records decorated with [ChangesetTarget]
         var classDeclarations = context.SyntaxProvider
             .ForAttributeWithMetadataName(
                 AttributeFullName,
-                predicate: static (node, _) => node is ClassDeclarationSyntax,
+                predicate: static (node, _) => node is ClassDeclarationSyntax or RecordDeclarationSyntax,
                 transform: static (ctx, _) => GetModelInfo(ctx))
             .Where(static m => m is not null)
             .Select(static (m, _) => m!);
@@ -39,17 +39,22 @@ public class ChangesetGenerator : IIncrementalGenerator
             return null;
 
         var properties = new List<PropertyInfo>();
-        foreach (var member in typeSymbol.GetMembers())
+        var seen = new HashSet<string>();
+        for (var type = typeSymbol; type is not null && type.SpecialType != SpecialType.System_Object; type = type.BaseType)
         {
-            if (member is IPropertySymbol prop &&
-                prop.DeclaredAccessibility == Accessibility.Public &&
-                !prop.IsReadOnly &&
-                !prop.IsStatic &&
-                prop.SetMethod is not null)
+            foreach (var member in type.GetMembers())
             {
-                properties.Add(new PropertyInfo(
-                    prop.Name,
-                    prop.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)));
+                if (member is IPropertySymbol prop &&
+                    prop.DeclaredAccessibility == Accessibility.Public &&
+                    !prop.IsReadOnly &&
+                    !prop.IsStatic &&
+                    prop.SetMethod is not null &&
+                    seen.Add(prop.Name))
+                {
+                    properties.Add(new PropertyInfo(
+                        prop.Name,
+                        prop.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)));
+                }
             }
         }
 
