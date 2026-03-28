@@ -12,9 +12,26 @@ public class TestUser
     public int Age { get; set; }
 }
 
+public class TestAddress
+{
+    public int Id { get; set; }
+    public string Street { get; set; } = "";
+    public string City { get; set; } = "";
+}
+
+public class TestUserWithAddress
+{
+    public int Id { get; set; }
+    public string Name { get; set; } = "";
+    public int? AddressId { get; set; }
+    public TestAddress? Address { get; set; }
+}
+
 public class TestDbContext : DbContext
 {
     public DbSet<TestUser> Users => Set<TestUser>();
+    public DbSet<TestUserWithAddress> UsersWithAddress => Set<TestUserWithAddress>();
+    public DbSet<TestAddress> Addresses => Set<TestAddress>();
 
     public TestDbContext(DbContextOptions<TestDbContext> options) : base(options) { }
 }
@@ -144,6 +161,58 @@ public class DbContextExtensionsTests : IDisposable
             ["Name"]);
 
         var result = cs.ValidateUnique("Email", _db);
+        Assert.True(result.IsValid);
+    }
+
+    [Fact]
+    public async Task ValidateUniqueAsync_NullValue_Passes()
+    {
+        _db.Users.Add(new TestUser { Name = "Alice", Email = "alice@test.com" });
+        await _db.SaveChangesAsync();
+
+        var cs = Changeset<TestUser>.Cast(
+            new Dictionary<string, object?> { ["Email"] = null },
+            ["Email"]);
+
+        var result = await cs.ValidateUniqueAsync("Email", _db);
+        Assert.True(result.IsValid);
+    }
+
+    [Fact]
+    public void ApplyTo_Update_DoesNotTouchNavigationProperties()
+    {
+        var address = new TestAddress { Id = 1, Street = "123 Main", City = "Springfield" };
+        var user = new TestUserWithAddress { Id = 1, Name = "Alice", AddressId = 1, Address = address };
+        _db.Addresses.Add(address);
+        _db.UsersWithAddress.Add(user);
+        _db.SaveChanges();
+        _db.Entry(user).State = EntityState.Unchanged;
+        _db.Entry(address).State = EntityState.Unchanged;
+
+        var cs = Changeset<TestUserWithAddress>.Cast(user,
+            new Dictionary<string, object?> { ["Name"] = "Bob" },
+            ["Name"]);
+
+        cs.ApplyTo(_db);
+
+        var entry = _db.Entry(user);
+        Assert.True(entry.Property("Name").IsModified);
+        Assert.False(entry.Property("AddressId").IsModified);
+        Assert.Equal("Bob", user.Name);
+        Assert.Same(address, user.Address); // navigation property untouched
+    }
+
+    [Fact]
+    public async Task ValidateUniqueAsync_FieldNotInChanges_Skipped()
+    {
+        _db.Users.Add(new TestUser { Name = "Alice", Email = "alice@test.com" });
+        await _db.SaveChangesAsync();
+
+        var cs = Changeset<TestUser>.Cast(
+            new Dictionary<string, object?> { ["Name"] = "Alice" },
+            ["Name"]);
+
+        var result = await cs.ValidateUniqueAsync("Email", _db);
         Assert.True(result.IsValid);
     }
 }

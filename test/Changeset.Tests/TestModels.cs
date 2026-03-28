@@ -45,6 +45,17 @@ public class Order
     public Address? Address { get; set; }
 }
 
+public class NoDefaultConstructor
+{
+    public NoDefaultConstructor(string name)
+    {
+        Name = name;
+    }
+
+    public string Name { get; set; }
+    public string Email { get; set; } = "";
+}
+
 public enum UserRole
 {
     Guest,

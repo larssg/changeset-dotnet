@@ -84,8 +84,18 @@ public static class ChangesetExtensions
     private static T ShallowClone<T>(T source) where T : class
     {
         var type = typeof(T);
-        var clone = Activator.CreateInstance(type)
-            ?? throw new InvalidOperationException($"Cannot create instance of {type.Name}");
+        object clone;
+        try
+        {
+            clone = Activator.CreateInstance(type)
+                ?? throw new InvalidOperationException($"Cannot create instance of {type.Name}.");
+        }
+        catch (MissingMethodException)
+        {
+            throw new InvalidOperationException(
+                $"Type '{type.Name}' does not have a parameterless constructor. " +
+                $"Use ApplyChanges(factory) with a factory function that creates the instance.");
+        }
 
         foreach (var prop in type.GetProperties(BindingFlags.Public | BindingFlags.Instance))
         {
