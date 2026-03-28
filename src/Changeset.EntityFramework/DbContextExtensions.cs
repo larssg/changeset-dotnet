@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Reflection;
 using Microsoft.EntityFrameworkCore;
 
@@ -5,6 +6,22 @@ namespace Changeset.EntityFramework;
 
 public static class DbContextExtensions
 {
+    private static readonly ConcurrentDictionary<Type, Dictionary<string, PropertyInfo>> WritablePropertyMapCache = new();
+
+    private static Dictionary<string, PropertyInfo> GetWritablePropertyMap(Type type)
+    {
+        return WritablePropertyMapCache.GetOrAdd(type, static t =>
+        {
+            var map = new Dictionary<string, PropertyInfo>(StringComparer.Ordinal);
+            foreach (var p in t.GetProperties(BindingFlags.Public | BindingFlags.Instance))
+            {
+                if (p.CanWrite)
+                    map[p.Name] = p;
+            }
+            return map;
+        });
+    }
+
     /// <summary>
     /// Applies a valid changeset to the DbContext. For inserts, adds a new entity.
     /// For updates, attaches and marks only changed properties as modified.
@@ -32,10 +49,7 @@ public static class DbContextExtensions
         if (entry.State == EntityState.Detached)
             context.Set<T>().Attach(existing);
 
-        var properties = typeof(T).GetProperties(BindingFlags.Public | BindingFlags.Instance);
-        var propMap = properties
-            .Where(p => p.CanWrite)
-            .ToDictionary(p => p.Name, StringComparer.Ordinal);
+        var propMap = GetWritablePropertyMap(typeof(T));
 
         foreach (var (field, value) in changeset.Changes)
         {
@@ -72,26 +86,16 @@ public static class DbContextExtensions
         if (!changeset.Changes.TryGetValue(field, out var value))
             return changeset;
 
-        var prop = typeof(T).GetProperty(field, BindingFlags.Public | BindingFlags.Instance);
-        if (prop is null)
-            return changeset;
+        var exists = context.Set<T>().AsNoTracking()
+            .Any(e => EF.Property<object>(e, field) == value);
 
-        // Build a query that checks for existing entities with the same field value
-        var set = context.Set<T>();
-        var exists = set.AsNoTracking()
-            .AsEnumerable()
-            .Any(e =>
-            {
-                var existingValue = prop.GetValue(e);
-                if (!Equals(existingValue, value))
-                    return false;
-
-                // Exclude the current entity if updating
-                if (changeset.Data is not null)
-                    return !ReferenceEquals(e, changeset.Data) && !Equals(e, changeset.Data);
-
-                return true;
-            });
+        if (exists && changeset.Data is not null)
+        {
+            var prop = typeof(T).GetProperty(field, BindingFlags.Public | BindingFlags.Instance);
+            var currentValue = prop?.GetValue(changeset.Data);
+            if (Equals(currentValue, value))
+                return changeset; // Same entity, same value — not a conflict
+        }
 
         if (exists)
             return changeset.AddError(field, message ?? "has already been taken", "uniqueness");
