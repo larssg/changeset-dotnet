@@ -14,7 +14,7 @@ app.MapPost("/users", (JsonElement body) =>
     var @params = JsonSerializer.Deserialize<Dictionary<string, object?>>(body.GetRawText())
         ?? new Dictionary<string, object?>();
 
-    var cs = Changeset.Changeset.Cast<User>(@params, ["Name", "Email", "Age"])
+    var cs = Changeset<User>.Cast(@params, ["Name", "Email", "Age"])
         .ValidateRequired(["Name", "Email"])
         .ValidateFormat("Email", @"^[^@]+@[^@]+\.[^@]+$")
         .ValidateLength("Name", min: 2, max: 100)
@@ -42,7 +42,7 @@ app.MapPut("/users/{id:int}", (int id, JsonElement body) =>
     var @params = JsonSerializer.Deserialize<Dictionary<string, object?>>(body.GetRawText())
         ?? new Dictionary<string, object?>();
 
-    var cs = Changeset.Changeset.Cast(existing, @params, ["Name", "Email", "Age"])
+    var cs = Changeset<User>.Cast(existing, @params, ["Name", "Email", "Age"])
         .ValidateRequired(["Name", "Email"])
         .ValidateFormat("Email", @"^[^@]+@[^@]+\.[^@]+$")
         .ValidateLength("Name", min: 2, max: 100)

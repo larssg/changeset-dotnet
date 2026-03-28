@@ -7,7 +7,7 @@ public class ValidatorTests
     [Fact]
     public void ValidateRequired_Present_Passes()
     {
-        var cs = Changeset.Cast<User>(
+        var cs = Changeset<User>.Cast(
             new Dictionary<string, object?> { ["Name"] = "Alice" }, ["Name"])
             .ValidateRequired(["Name"]);
 
@@ -17,7 +17,7 @@ public class ValidatorTests
     [Fact]
     public void ValidateRequired_Missing_Fails()
     {
-        var cs = Changeset.Cast<User>(
+        var cs = Changeset<User>.Cast(
             new Dictionary<string, object?>(), ["Name"])
             .ValidateRequired(["Name"]);
 
@@ -29,7 +29,7 @@ public class ValidatorTests
     [Fact]
     public void ValidateRequired_Null_Fails()
     {
-        var cs = Changeset.Cast<User>(
+        var cs = Changeset<User>.Cast(
             new Dictionary<string, object?> { ["BirthDate"] = null }, ["BirthDate"])
             .ValidateRequired(["BirthDate"]);
 
@@ -39,7 +39,7 @@ public class ValidatorTests
     [Fact]
     public void ValidateRequired_EmptyString_Fails()
     {
-        var cs = Changeset.Cast<User>(
+        var cs = Changeset<User>.Cast(
             new Dictionary<string, object?> { ["Name"] = "" }, ["Name"])
             .ValidateRequired(["Name"]);
 
@@ -49,7 +49,7 @@ public class ValidatorTests
     [Fact]
     public void ValidateRequired_WhitespaceString_Fails()
     {
-        var cs = Changeset.Cast<User>(
+        var cs = Changeset<User>.Cast(
             new Dictionary<string, object?> { ["Name"] = "   " }, ["Name"],
             new CastOptions { TrimStrings = false })
             .ValidateRequired(["Name"]);
@@ -60,7 +60,7 @@ public class ValidatorTests
     [Fact]
     public void ValidateFormat_ValidEmail_Passes()
     {
-        var cs = Changeset.Cast<User>(
+        var cs = Changeset<User>.Cast(
             new Dictionary<string, object?> { ["Email"] = "alice@example.com" }, ["Email"])
             .ValidateFormat("Email", @"^[^@]+@[^@]+\.[^@]+$");
 
@@ -70,7 +70,7 @@ public class ValidatorTests
     [Fact]
     public void ValidateFormat_InvalidEmail_Fails()
     {
-        var cs = Changeset.Cast<User>(
+        var cs = Changeset<User>.Cast(
             new Dictionary<string, object?> { ["Email"] = "not-an-email" }, ["Email"])
             .ValidateFormat("Email", @"^[^@]+@[^@]+\.[^@]+$");
 
@@ -81,7 +81,7 @@ public class ValidatorTests
     [Fact]
     public void ValidateFormat_FieldNotInChanges_Skipped()
     {
-        var cs = Changeset.Cast<User>(
+        var cs = Changeset<User>.Cast(
             new Dictionary<string, object?>(), ["Email"])
             .ValidateFormat("Email", @"^[^@]+@[^@]+\.[^@]+$");
 
@@ -91,7 +91,7 @@ public class ValidatorTests
     [Fact]
     public void ValidateLength_Min_TooShort_Fails()
     {
-        var cs = Changeset.Cast<User>(
+        var cs = Changeset<User>.Cast(
             new Dictionary<string, object?> { ["Name"] = "A" }, ["Name"])
             .ValidateLength("Name", min: 2);
 
@@ -103,7 +103,7 @@ public class ValidatorTests
     [Fact]
     public void ValidateLength_Max_TooLong_Fails()
     {
-        var cs = Changeset.Cast<User>(
+        var cs = Changeset<User>.Cast(
             new Dictionary<string, object?> { ["Name"] = new string('A', 101) }, ["Name"])
             .ValidateLength("Name", max: 100);
 
@@ -114,7 +114,7 @@ public class ValidatorTests
     [Fact]
     public void ValidateLength_Exact_WrongLength_Fails()
     {
-        var cs = Changeset.Cast<User>(
+        var cs = Changeset<User>.Cast(
             new Dictionary<string, object?> { ["Name"] = "ABC" }, ["Name"])
             .ValidateLength("Name", @is: 5);
 
@@ -124,7 +124,7 @@ public class ValidatorTests
     [Fact]
     public void ValidateLength_WithinBounds_Passes()
     {
-        var cs = Changeset.Cast<User>(
+        var cs = Changeset<User>.Cast(
             new Dictionary<string, object?> { ["Name"] = "Alice" }, ["Name"])
             .ValidateLength("Name", min: 2, max: 100);
 
@@ -134,7 +134,7 @@ public class ValidatorTests
     [Fact]
     public void ValidateNumber_GreaterThanOrEqual_Passes()
     {
-        var cs = Changeset.Cast<User>(
+        var cs = Changeset<User>.Cast(
             new Dictionary<string, object?> { ["Age"] = 18 }, ["Age"])
             .ValidateNumber("Age", greaterThanOrEqual: 0);
 
@@ -144,7 +144,7 @@ public class ValidatorTests
     [Fact]
     public void ValidateNumber_LessThan_Fails()
     {
-        var cs = Changeset.Cast<User>(
+        var cs = Changeset<User>.Cast(
             new Dictionary<string, object?> { ["Age"] = 200 }, ["Age"])
             .ValidateNumber("Age", lessThan: 150);
 
@@ -155,7 +155,7 @@ public class ValidatorTests
     [Fact]
     public void ValidateInclusion_Valid_Passes()
     {
-        var cs = Changeset.Cast<User>(
+        var cs = Changeset<User>.Cast(
             new Dictionary<string, object?> { ["Role"] = UserRole.Admin }, ["Role"])
             .ValidateInclusion("Role", [UserRole.Member, UserRole.Admin]);
 
@@ -165,7 +165,7 @@ public class ValidatorTests
     [Fact]
     public void ValidateInclusion_Invalid_Fails()
     {
-        var cs = Changeset.Cast<User>(
+        var cs = Changeset<User>.Cast(
             new Dictionary<string, object?> { ["Role"] = UserRole.Guest }, ["Role"])
             .ValidateInclusion("Role", [UserRole.Member, UserRole.Admin]);
 
@@ -176,7 +176,7 @@ public class ValidatorTests
     [Fact]
     public void ValidateExclusion_Excluded_Fails()
     {
-        var cs = Changeset.Cast<User>(
+        var cs = Changeset<User>.Cast(
             new Dictionary<string, object?> { ["Name"] = "admin" }, ["Name"])
             .ValidateExclusion("Name", ["admin", "root", "superuser"]);
 
@@ -187,7 +187,7 @@ public class ValidatorTests
     [Fact]
     public void ValidateExclusion_NotExcluded_Passes()
     {
-        var cs = Changeset.Cast<User>(
+        var cs = Changeset<User>.Cast(
             new Dictionary<string, object?> { ["Name"] = "Alice" }, ["Name"])
             .ValidateExclusion("Name", ["admin", "root"]);
 
@@ -203,7 +203,7 @@ public class ValidatorTests
             ["Email_confirmation"] = "alice@example.com"
         };
 
-        var cs = Changeset.Cast<User>(@params, ["Email"])
+        var cs = Changeset<User>.Cast(@params, ["Email"])
             .ValidateConfirmation("Email");
 
         Assert.True(cs.IsValid);
@@ -218,7 +218,7 @@ public class ValidatorTests
             ["Email_confirmation"] = "bob@example.com"
         };
 
-        var cs = Changeset.Cast<User>(@params, ["Email"])
+        var cs = Changeset<User>.Cast(@params, ["Email"])
             .ValidateConfirmation("Email");
 
         Assert.False(cs.IsValid);
@@ -228,7 +228,7 @@ public class ValidatorTests
     [Fact]
     public void ValidateChange_CustomValidator_Passes()
     {
-        var cs = Changeset.Cast<User>(
+        var cs = Changeset<User>.Cast(
             new Dictionary<string, object?> { ["Name"] = "Alice" }, ["Name"])
             .ValidateChange("Name", (changeset, value) =>
             {
@@ -243,7 +243,7 @@ public class ValidatorTests
     [Fact]
     public void ValidateChange_CustomValidator_Fails()
     {
-        var cs = Changeset.Cast<User>(
+        var cs = Changeset<User>.Cast(
             new Dictionary<string, object?> { ["Name"] = "Bob" }, ["Name"])
             .ValidateChange("Name", (changeset, value) =>
             {
@@ -265,7 +265,7 @@ public class ValidatorTests
             ["Email"] = "alice@example.com"
         };
 
-        var cs = Changeset.Cast<User>(@params, ["Name", "Email"])
+        var cs = Changeset<User>.Cast(@params, ["Name", "Email"])
             .Validate(changeset =>
             {
                 var name = changeset.GetChange<string>("Name");
@@ -287,7 +287,7 @@ public class ValidatorTests
             ["Email"] = "bad"
         };
 
-        var cs = Changeset.Cast<User>(@params, ["Name", "Email"])
+        var cs = Changeset<User>.Cast(@params, ["Name", "Email"])
             .ValidateRequired(["Name", "Email"])
             .ValidateFormat("Email", @"^[^@]+@[^@]+\.[^@]+$")
             .ValidateLength("Name", min: 2);
@@ -303,7 +303,7 @@ public class ValidatorTests
     public void Validators_DoNotMutate_Original()
     {
         var @params = new Dictionary<string, object?> { ["Name"] = "" };
-        var cs = Changeset.Cast<User>(@params, ["Name"]);
+        var cs = Changeset<User>.Cast(@params, ["Name"]);
         var validated = cs.ValidateRequired(["Name"]);
 
         Assert.True(cs.IsValid);       // original untouched

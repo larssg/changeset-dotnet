@@ -14,7 +14,7 @@ public class ApplyChangesTests
             ["Age"] = 30
         };
 
-        var cs = Changeset.Cast<User>(@params, ["Name", "Email", "Age"]);
+        var cs = Changeset<User>.Cast(@params, ["Name", "Email", "Age"]);
         var user = cs.ApplyChanges();
 
         Assert.Equal("Alice", user.Name);
@@ -34,7 +34,7 @@ public class ApplyChangesTests
         };
 
         var @params = new Dictionary<string, object?> { ["Name"] = "Robert" };
-        var cs = Changeset.Cast(existing, @params, ["Name"]);
+        var cs = Changeset<User>.Cast(existing, @params, ["Name"]);
         var updated = cs.ApplyChanges();
 
         Assert.Equal("Robert", updated.Name);
@@ -48,7 +48,7 @@ public class ApplyChangesTests
     public void ApplyChanges_Invalid_Throws()
     {
         var @params = new Dictionary<string, object?> { ["Age"] = "not-a-number" };
-        var cs = Changeset.Cast<User>(@params, ["Age"]);
+        var cs = Changeset<User>.Cast(@params, ["Age"]);
 
         Assert.False(cs.IsValid);
         Assert.Throws<InvalidOperationException>(() => cs.ApplyChanges());
@@ -63,7 +63,7 @@ public class ApplyChangesTests
             ["Email"] = "alice@example.com"
         };
 
-        var cs = Changeset.Cast<User>(@params, ["Name", "Email"]);
+        var cs = Changeset<User>.Cast(@params, ["Name", "Email"]);
         var result = cs.ToResult();
 
         Assert.IsType<ChangesetResult<User>.Valid>(result);
@@ -75,7 +75,7 @@ public class ApplyChangesTests
     public void ToResult_Invalid_ReturnsInvalidResult()
     {
         var @params = new Dictionary<string, object?> { ["Age"] = "bad" };
-        var cs = Changeset.Cast<User>(@params, ["Age"]);
+        var cs = Changeset<User>.Cast(@params, ["Age"]);
         var result = cs.ToResult();
 
         Assert.IsType<ChangesetResult<User>.Invalid>(result);
@@ -87,7 +87,7 @@ public class ApplyChangesTests
     public void ApplyChanges_WithFactory_UsesFactory()
     {
         var @params = new Dictionary<string, object?> { ["Name"] = "Alice" };
-        var cs = Changeset.Cast<User>(@params, ["Name"]);
+        var cs = Changeset<User>.Cast(@params, ["Name"]);
 
         var user = cs.ApplyChanges(() => new User { IsActive = true });
 
@@ -105,7 +105,7 @@ public class ApplyChangesTests
             ["Age"] = "30"
         };
 
-        var result = Changeset.Cast<User>(@params, ["Name", "Email", "Age"])
+        var result = Changeset<User>.Cast(@params, ["Name", "Email", "Age"])
             .ValidateRequired(["Name", "Email"])
             .ValidateFormat("Email", @"^[^@]+@[^@]+\.[^@]+$")
             .ValidateLength("Name", min: 2, max: 100)
@@ -129,7 +129,7 @@ public class ApplyChangesTests
             ["Age"] = "200"
         };
 
-        var cs = Changeset.Cast<User>(@params, ["Name", "Email", "Age"])
+        var cs = Changeset<User>.Cast(@params, ["Name", "Email", "Age"])
             .ValidateRequired(["Name"])
             .ValidateFormat("Email", @"^[^@]+@[^@]+\.[^@]+$")
             .ValidateNumber("Age", lessThan: 150);

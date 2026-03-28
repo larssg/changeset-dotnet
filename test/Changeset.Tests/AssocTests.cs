@@ -18,7 +18,7 @@ public class AssocTests
             }
         };
 
-        var cs = Changeset.Cast<UserWithAddress>(@params, ["Name"])
+        var cs = Changeset<UserWithAddress>.Cast(@params, ["Name"])
             .CastAssoc<UserWithAddress, Address>("Address", ["Street", "City", "Zip"]);
 
         Assert.True(cs.IsValid);
@@ -39,7 +39,7 @@ public class AssocTests
             ["Name"] = "Alice"
         };
 
-        var cs = Changeset.Cast<UserWithAddress>(@params, ["Name"])
+        var cs = Changeset<UserWithAddress>.Cast(@params, ["Name"])
             .CastAssoc<UserWithAddress, Address>("Address", ["Street", "City"]);
 
         Assert.True(cs.IsValid);
@@ -55,7 +55,7 @@ public class AssocTests
             ["Address"] = "not-a-dict"
         };
 
-        var cs = Changeset.Cast<UserWithAddress>(@params, ["Name"])
+        var cs = Changeset<UserWithAddress>.Cast(@params, ["Name"])
             .CastAssoc<UserWithAddress, Address>("Address", ["Street"]);
 
         Assert.False(cs.IsValid);
@@ -75,7 +75,7 @@ public class AssocTests
             }
         };
 
-        var cs = Changeset.Cast<UserWithAddress>(@params, ["Name"])
+        var cs = Changeset<UserWithAddress>.Cast(@params, ["Name"])
             .CastAssoc<UserWithAddress, Address>("Address", ["Zip"],
                 new CastOptions { StrictCasting = false });
 
@@ -98,7 +98,7 @@ public class AssocTests
             }
         };
 
-        var cs = Changeset.Cast<UserWithAddress>(@params, ["Name"])
+        var cs = Changeset<UserWithAddress>.Cast(@params, ["Name"])
             .CastAssoc<UserWithAddress, Address>("Address", ["Street", "City"])
             .ValidateAssoc<UserWithAddress, Address>("Address", addressCs =>
                 addressCs.ValidateRequired(["Street"]));
@@ -121,7 +121,7 @@ public class AssocTests
             }
         };
 
-        var cs = Changeset.Cast<UserWithAddress>(@params, ["Name"])
+        var cs = Changeset<UserWithAddress>.Cast(@params, ["Name"])
             .CastAssoc<UserWithAddress, Address>("Address", ["Street", "City"])
             .ValidateAssoc<UserWithAddress, Address>("Address", addressCs =>
                 addressCs.ValidateRequired(["Street", "City"]));
@@ -137,7 +137,7 @@ public class AssocTests
             ["Name"] = "Alice"
         };
 
-        var cs = Changeset.Cast<UserWithAddress>(@params, ["Name"])
+        var cs = Changeset<UserWithAddress>.Cast(@params, ["Name"])
             .ValidateAssoc<UserWithAddress, Address>("Address", addressCs =>
                 addressCs.ValidateRequired(["Street"]));
 
@@ -157,7 +157,7 @@ public class AssocTests
             }
         };
 
-        var cs = Changeset.Cast<UserWithAddress>(@params, ["Name"])
+        var cs = Changeset<UserWithAddress>.Cast(@params, ["Name"])
             .CastAssoc<UserWithAddress, Address>("Address", ["Street", "City"])
             .ValidateAssoc<UserWithAddress, Address>("Address", addressCs =>
                 addressCs
@@ -185,7 +185,7 @@ public class AssocTests
             }
         };
 
-        var cs = Changeset.Cast(existing, @params, ["Name"])
+        var cs = Changeset<UserWithAddress>.Cast(existing, @params, ["Name"])
             .CastAssoc<UserWithAddress, Address>("Address", ["Street", "City", "Zip"]);
 
         Assert.True(cs.IsValid);
@@ -205,7 +205,7 @@ public class AssocTests
             ["Name"] = "Alice"
         };
 
-        var cs = Changeset.Cast<UserWithAddress>(@params, ["Name"]);
+        var cs = Changeset<UserWithAddress>.Cast(@params, ["Name"]);
         Assert.Null(cs.GetAssoc<UserWithAddress, Address>("Address"));
     }
 }
