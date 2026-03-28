@@ -12,6 +12,20 @@ public class User
     public UserRole Role { get; set; }
 }
 
+public class Address
+{
+    public string Street { get; set; } = "";
+    public string City { get; set; } = "";
+    public string Zip { get; set; } = "";
+}
+
+public class UserWithAddress
+{
+    public string Name { get; set; } = "";
+    public string Email { get; set; } = "";
+    public Address? Address { get; set; }
+}
+
 public enum UserRole
 {
     Guest,
