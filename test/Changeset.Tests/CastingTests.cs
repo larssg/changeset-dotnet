@@ -49,7 +49,7 @@ public class CastingTests
         var cs = Changeset<User>.Cast(@params, ["IsActive"]);
 
         Assert.True(cs.IsValid);
-        Assert.Equal(true, cs.GetChange<bool>("IsActive"));
+        Assert.True(cs.GetChange<bool>("IsActive"));
     }
 
     [Fact]
@@ -59,7 +59,7 @@ public class CastingTests
         var cs = Changeset<User>.Cast(@params, ["IsActive"]);
 
         Assert.True(cs.IsValid);
-        Assert.Equal(true, cs.GetChange<bool>("IsActive"));
+        Assert.True(cs.GetChange<bool>("IsActive"));
     }
 
     [Fact]
