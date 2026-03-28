@@ -12,6 +12,6 @@
 
 ## Source Generator
 
-- [ ] Record types with `[ChangesetTarget]`
-- [ ] Types with inherited properties — generator picks up base class properties
-- [ ] Types with static properties — should be excluded
+- [x] Record types with `[ChangesetTarget]`
+- [x] Types with inherited properties — generator picks up base class properties
+- [x] Types with static properties — should be excluded
