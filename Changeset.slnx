@@ -1,0 +1,13 @@
+<Solution>
+  <Folder Name="/samples/">
+    <Project Path="samples/Changeset.Sample.WebApi/Changeset.Sample.WebApi.csproj" />
+  </Folder>
+  <Folder Name="/src/">
+    <Project Path="src/Changeset.EntityFramework/Changeset.EntityFramework.csproj" />
+    <Project Path="src/Changeset/Changeset.csproj" />
+  </Folder>
+  <Folder Name="/test/">
+    <Project Path="test/Changeset.EntityFramework.Tests/Changeset.EntityFramework.Tests.csproj" />
+    <Project Path="test/Changeset.Tests/Changeset.Tests.csproj" />
+  </Folder>
+</Solution>
