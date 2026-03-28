@@ -50,15 +50,17 @@ public class FieldNameAnalyzer : DiagnosticAnalyzer
         if (methodSymbol is null)
             return;
 
-        if (methodSymbol.Name != "Cast" ||
-            methodSymbol.ContainingType.ToDisplayString() != "Changeset.Changeset")
+        if (methodSymbol.Name != "Cast")
             return;
 
-        // Get the type argument T
-        if (methodSymbol.TypeArguments.Length == 0)
+        var containingType = methodSymbol.ContainingType;
+        if (containingType.Name != "Changeset" ||
+            containingType.ContainingNamespace.ToDisplayString() != "Changeset" ||
+            !containingType.IsGenericType)
             return;
 
-        var targetType = methodSymbol.TypeArguments[0] as INamedTypeSymbol;
+        // Get the type argument T from the containing Changeset<T>
+        var targetType = containingType.TypeArguments[0] as INamedTypeSymbol;
         if (targetType is null)
             return;
 

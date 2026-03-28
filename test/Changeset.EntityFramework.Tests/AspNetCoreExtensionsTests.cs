@@ -1,4 +1,4 @@
-using ChangesetFactory = Changeset.Changeset;
+using Changeset;
 using Changeset.EntityFramework;
 using Changeset.Validators;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
@@ -10,7 +10,7 @@ public class AspNetCoreExtensionsTests
     [Fact]
     public void ToValidationErrors_MapsErrorsByField()
     {
-        var cs = ChangesetFactory.Cast<TestUser>(
+        var cs = Changeset<TestUser>.Cast(
             new Dictionary<string, object?> { ["Name"] = "", ["Email"] = "bad" },
             ["Name", "Email"])
             .ValidateRequired(["Name"])
@@ -27,7 +27,7 @@ public class AspNetCoreExtensionsTests
     [Fact]
     public void ToValidationProblemOrNull_ValidChangeset_ReturnsNull()
     {
-        var cs = ChangesetFactory.Cast<TestUser>(
+        var cs = Changeset<TestUser>.Cast(
             new Dictionary<string, object?> { ["Name"] = "Alice" },
             ["Name"]);
 
@@ -37,7 +37,7 @@ public class AspNetCoreExtensionsTests
     [Fact]
     public void ToValidationProblemOrNull_InvalidChangeset_ReturnsResult()
     {
-        var cs = ChangesetFactory.Cast<TestUser>(
+        var cs = Changeset<TestUser>.Cast(
             new Dictionary<string, object?> { ["Name"] = "" },
             ["Name"])
             .ValidateRequired(["Name"]);
@@ -49,7 +49,7 @@ public class AspNetCoreExtensionsTests
     [Fact]
     public void ToProblemDetails_ContainsErrors()
     {
-        var cs = ChangesetFactory.Cast<TestUser>(
+        var cs = Changeset<TestUser>.Cast(
             new Dictionary<string, object?> { ["Name"] = "" },
             ["Name"])
             .ValidateRequired(["Name"]);
@@ -62,7 +62,7 @@ public class AspNetCoreExtensionsTests
     [Fact]
     public void AddToModelState_AddsAllErrors()
     {
-        var cs = ChangesetFactory.Cast<TestUser>(
+        var cs = Changeset<TestUser>.Cast(
             new Dictionary<string, object?> { ["Name"] = "", ["Email"] = "bad" },
             ["Name", "Email"])
             .ValidateRequired(["Name"])
@@ -81,7 +81,7 @@ public class AspNetCoreExtensionsTests
     [Fact]
     public void AddToModelState_ValidChangeset_NoErrors()
     {
-        var cs = ChangesetFactory.Cast<TestUser>(
+        var cs = Changeset<TestUser>.Cast(
             new Dictionary<string, object?> { ["Name"] = "Alice" },
             ["Name"]);
 

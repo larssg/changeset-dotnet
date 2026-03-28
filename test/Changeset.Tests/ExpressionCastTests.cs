@@ -12,7 +12,7 @@ public class ExpressionCastTests
             ["Age"] = 30
         };
 
-        var cs = Changeset.Cast<User>(@params, u => new { u.Name, u.Email });
+        var cs = Changeset<User>.Cast(@params, u => new { u.Name, u.Email });
 
         Assert.True(cs.IsValid);
         Assert.Equal("Alice", cs.GetChange<string>("Name"));
@@ -30,7 +30,7 @@ public class ExpressionCastTests
             ["Email"] = "alice@test.com"
         };
 
-        var cs = Changeset.Cast<User>(@params, u => u.Name);
+        var cs = Changeset<User>.Cast(@params, u => u.Name);
 
         Assert.True(cs.IsValid);
         Assert.Equal("Alice", cs.GetChange<string>("Name"));
@@ -47,7 +47,7 @@ public class ExpressionCastTests
             ["Email"] = "old@test.com"
         };
 
-        var cs = Changeset.Cast(existing, @params, u => new { u.Name, u.Email });
+        var cs = Changeset<User>.Cast(existing, @params, u => new { u.Name, u.Email });
 
         Assert.Equal(ChangesetAction.Update, cs.Action);
         Assert.Equal("New", cs.GetChange<string>("Name"));
@@ -64,7 +64,7 @@ public class ExpressionCastTests
             ["Salary"] = "50000.50"
         };
 
-        var cs = Changeset.Cast<User>(@params, u => new { u.Name, u.Salary },
+        var cs = Changeset<User>.Cast(@params, u => new { u.Name, u.Salary },
             new CastOptions { TrimStrings = true });
 
         Assert.Equal("Alice", cs.GetChange<string>("Name"));
@@ -82,7 +82,7 @@ public class ExpressionCastTests
             ["Salary"] = 75000m
         };
 
-        var cs = Changeset.Cast<User>(@params, u => new { u.Name, u.Age, u.IsActive, u.Salary });
+        var cs = Changeset<User>.Cast(@params, u => new { u.Name, u.Age, u.IsActive, u.Salary });
 
         Assert.True(cs.IsValid);
         Assert.Equal(4, cs.Changes.Count);

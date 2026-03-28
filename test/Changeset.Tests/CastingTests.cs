@@ -13,7 +13,7 @@ public class CastingTests
             ["Email"] = "alice@example.com"
         };
 
-        var cs = Changeset.Cast<User>(@params, ["Name", "Email"]);
+        var cs = Changeset<User>.Cast(@params, ["Name", "Email"]);
 
         Assert.True(cs.IsValid);
         Assert.Equal("Alice", cs.GetChange<string>("Name"));
@@ -25,7 +25,7 @@ public class CastingTests
     public void Cast_StringToInt_Coerces()
     {
         var @params = new Dictionary<string, object?> { ["Age"] = "42" };
-        var cs = Changeset.Cast<User>(@params, ["Age"]);
+        var cs = Changeset<User>.Cast(@params, ["Age"]);
 
         Assert.True(cs.IsValid);
         Assert.Equal(42, cs.GetChange<int>("Age"));
@@ -35,7 +35,7 @@ public class CastingTests
     public void Cast_StringToDecimal_Coerces()
     {
         var @params = new Dictionary<string, object?> { ["Salary"] = "75000.50" };
-        var cs = Changeset.Cast<User>(@params, ["Salary"]);
+        var cs = Changeset<User>.Cast(@params, ["Salary"]);
 
         Assert.True(cs.IsValid);
         Assert.Equal(75000.50m, cs.GetChange<decimal>("Salary"));
@@ -45,7 +45,7 @@ public class CastingTests
     public void Cast_StringToBool_Coerces()
     {
         var @params = new Dictionary<string, object?> { ["IsActive"] = "true" };
-        var cs = Changeset.Cast<User>(@params, ["IsActive"]);
+        var cs = Changeset<User>.Cast(@params, ["IsActive"]);
 
         Assert.True(cs.IsValid);
         Assert.Equal(true, cs.GetChange<bool>("IsActive"));
@@ -55,7 +55,7 @@ public class CastingTests
     public void Cast_StringToBool_NumericValues()
     {
         var @params = new Dictionary<string, object?> { ["IsActive"] = "1" };
-        var cs = Changeset.Cast<User>(@params, ["IsActive"]);
+        var cs = Changeset<User>.Cast(@params, ["IsActive"]);
 
         Assert.True(cs.IsValid);
         Assert.Equal(true, cs.GetChange<bool>("IsActive"));
@@ -65,7 +65,7 @@ public class CastingTests
     public void Cast_StringToDateTime_Coerces()
     {
         var @params = new Dictionary<string, object?> { ["BirthDate"] = "1990-06-15" };
-        var cs = Changeset.Cast<User>(@params, ["BirthDate"]);
+        var cs = Changeset<User>.Cast(@params, ["BirthDate"]);
 
         Assert.True(cs.IsValid);
         Assert.Equal(new DateTime(1990, 6, 15), cs.GetChange<DateTime>("BirthDate"));
@@ -76,7 +76,7 @@ public class CastingTests
     {
         var guid = Guid.NewGuid();
         var @params = new Dictionary<string, object?> { ["ExternalId"] = guid.ToString() };
-        var cs = Changeset.Cast<User>(@params, ["ExternalId"]);
+        var cs = Changeset<User>.Cast(@params, ["ExternalId"]);
 
         Assert.True(cs.IsValid);
         Assert.Equal(guid, cs.GetChange<Guid>("ExternalId"));
@@ -86,7 +86,7 @@ public class CastingTests
     public void Cast_StringToEnum_Coerces()
     {
         var @params = new Dictionary<string, object?> { ["Role"] = "Admin" };
-        var cs = Changeset.Cast<User>(@params, ["Role"]);
+        var cs = Changeset<User>.Cast(@params, ["Role"]);
 
         Assert.True(cs.IsValid);
         Assert.Equal(UserRole.Admin, cs.GetChange<UserRole>("Role"));
@@ -96,7 +96,7 @@ public class CastingTests
     public void Cast_StringToEnum_CaseInsensitive()
     {
         var @params = new Dictionary<string, object?> { ["Role"] = "admin" };
-        var cs = Changeset.Cast<User>(@params, ["Role"]);
+        var cs = Changeset<User>.Cast(@params, ["Role"]);
 
         Assert.True(cs.IsValid);
         Assert.Equal(UserRole.Admin, cs.GetChange<UserRole>("Role"));
@@ -106,7 +106,7 @@ public class CastingTests
     public void Cast_InvalidType_AddsError()
     {
         var @params = new Dictionary<string, object?> { ["Age"] = "not-a-number" };
-        var cs = Changeset.Cast<User>(@params, ["Age"]);
+        var cs = Changeset<User>.Cast(@params, ["Age"]);
 
         Assert.False(cs.IsValid);
         Assert.True(cs.HasErrorOn("Age"));
@@ -117,7 +117,7 @@ public class CastingTests
     public void Cast_NullForNullable_Succeeds()
     {
         var @params = new Dictionary<string, object?> { ["BirthDate"] = null };
-        var cs = Changeset.Cast<User>(@params, ["BirthDate"]);
+        var cs = Changeset<User>.Cast(@params, ["BirthDate"]);
 
         Assert.True(cs.IsValid);
         Assert.Null(cs.GetChange<DateTime?>("BirthDate"));
@@ -133,7 +133,7 @@ public class CastingTests
             ["Age"] = "42"
         };
 
-        var cs = Changeset.Cast<User>(@params, ["Name"]);
+        var cs = Changeset<User>.Cast(@params, ["Name"]);
 
         Assert.True(cs.IsValid);
         Assert.True(cs.Changes.ContainsKey("Name"));
@@ -150,7 +150,7 @@ public class CastingTests
             ["HackerField"] = "evil"
         };
 
-        var cs = Changeset.Cast<User>(@params, ["Name"],
+        var cs = Changeset<User>.Cast(@params, ["Name"],
             new CastOptions { StrictCasting = true });
 
         Assert.False(cs.IsValid);
@@ -162,7 +162,7 @@ public class CastingTests
     public void Cast_MissingField_NotInChanges()
     {
         var @params = new Dictionary<string, object?> { ["Name"] = "Alice" };
-        var cs = Changeset.Cast<User>(@params, ["Name", "Email"]);
+        var cs = Changeset<User>.Cast(@params, ["Name", "Email"]);
 
         Assert.True(cs.IsValid);
         Assert.True(cs.Changes.ContainsKey("Name"));
@@ -173,7 +173,7 @@ public class CastingTests
     public void Cast_CaseInsensitiveFields()
     {
         var @params = new Dictionary<string, object?> { ["name"] = "Alice" };
-        var cs = Changeset.Cast<User>(@params, ["Name"]);
+        var cs = Changeset<User>.Cast(@params, ["Name"]);
 
         Assert.True(cs.IsValid);
         Assert.Equal("Alice", cs.GetChange<string>("Name"));
@@ -183,7 +183,7 @@ public class CastingTests
     public void Cast_TrimsStrings_ByDefault()
     {
         var @params = new Dictionary<string, object?> { ["Name"] = "  Alice  " };
-        var cs = Changeset.Cast<User>(@params, ["Name"]);
+        var cs = Changeset<User>.Cast(@params, ["Name"]);
 
         Assert.Equal("Alice", cs.GetChange<string>("Name"));
     }
@@ -192,7 +192,7 @@ public class CastingTests
     public void Cast_NoTrim_WhenDisabled()
     {
         var @params = new Dictionary<string, object?> { ["Name"] = "  Alice  " };
-        var cs = Changeset.Cast<User>(@params, ["Name"],
+        var cs = Changeset<User>.Cast(@params, ["Name"],
             new CastOptions { TrimStrings = false });
 
         Assert.Equal("  Alice  ", cs.GetChange<string>("Name"));
@@ -204,7 +204,7 @@ public class CastingTests
         var existing = new User { Name = "Bob", Email = "bob@example.com", Age = 30 };
         var @params = new Dictionary<string, object?> { ["Name"] = "Robert" };
 
-        var cs = Changeset.Cast(existing, @params, ["Name"]);
+        var cs = Changeset<User>.Cast(existing, @params, ["Name"]);
 
         Assert.Equal(ChangesetAction.Update, cs.Action);
         Assert.Same(existing, cs.Data);
@@ -221,7 +221,7 @@ public class CastingTests
             ["Age"] = "31"      // different
         };
 
-        var cs = Changeset.Cast(existing, @params, ["Name", "Age"]);
+        var cs = Changeset<User>.Cast(existing, @params, ["Name", "Age"]);
 
         Assert.False(cs.Changes.ContainsKey("Name")); // unchanged, not in Changes
         Assert.True(cs.Changes.ContainsKey("Age"));
@@ -232,7 +232,7 @@ public class CastingTests
     public void Cast_EmptyParams_NoChanges()
     {
         var @params = new Dictionary<string, object?>();
-        var cs = Changeset.Cast<User>(@params, ["Name", "Email"]);
+        var cs = Changeset<User>.Cast(@params, ["Name", "Email"]);
 
         Assert.True(cs.IsValid);
         Assert.Empty(cs.Changes);
@@ -242,7 +242,7 @@ public class CastingTests
     public void Cast_EmptyPermitted_NoChanges()
     {
         var @params = new Dictionary<string, object?> { ["Name"] = "Alice" };
-        var cs = Changeset.Cast<User>(@params, []);
+        var cs = Changeset<User>.Cast(@params, []);
 
         Assert.True(cs.IsValid);
         Assert.Empty(cs.Changes);
@@ -252,7 +252,7 @@ public class CastingTests
     public void Cast_IntToInt_DirectAssignment()
     {
         var @params = new Dictionary<string, object?> { ["Age"] = 42 };
-        var cs = Changeset.Cast<User>(@params, ["Age"]);
+        var cs = Changeset<User>.Cast(@params, ["Age"]);
 
         Assert.True(cs.IsValid);
         Assert.Equal(42, cs.GetChange<int>("Age"));

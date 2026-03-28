@@ -1,4 +1,3 @@
-using ChangesetFactory = Changeset.Changeset;
 using Changeset;
 
 namespace Changeset.Generators.Tests;
@@ -13,7 +12,7 @@ public class AnalyzerTests
     public void ValidFieldNames_NoDiagnostic()
     {
         // This should compile without warnings — all field names are valid
-        var cs = ChangesetFactory.Cast<Product>(
+        var cs = Changeset<Product>.Cast(
             new Dictionary<string, object?> { ["Name"] = "Widget" },
             ["Name", "Price", "Stock"]);
 
@@ -28,7 +27,7 @@ public class AnalyzerTests
         // "Naem" should trigger CHGSET001 warning: "'Naem' is not a writable property on 'Product'. Did you mean 'Name'?"
         // "FooBar" should trigger CHGSET002 warning: "'FooBar' is not a writable property on 'Product'"
 #pragma warning disable CHGSET001, CHGSET002
-        var cs = ChangesetFactory.Cast<Product>(
+        var cs = Changeset<Product>.Cast(
             new Dictionary<string, object?> { ["Naem"] = "Widget", ["FooBar"] = "bad" },
             ["Naem", "FooBar"]);
 #pragma warning restore CHGSET001, CHGSET002

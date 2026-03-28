@@ -1,4 +1,6 @@
 using System.Collections.Immutable;
+using System.Linq.Expressions;
+using Changeset.Casting;
 
 namespace Changeset;
 
@@ -60,4 +62,50 @@ public sealed record Changeset<T> where T : class
 
     internal Changeset<T> WithChange(string field, object? value) =>
         this with { Changes = Changes.SetItem(field, value) };
+
+    public static Changeset<T> Cast(
+        IReadOnlyDictionary<string, object?> @params,
+        IReadOnlyList<string> permitted,
+        CastOptions? options = null)
+    {
+        return Caster.Cast<T>(null, @params, permitted, options ?? CastOptions.Default);
+    }
+
+    public static Changeset<T> Cast(
+        T data,
+        IReadOnlyDictionary<string, object?> @params,
+        IReadOnlyList<string> permitted,
+        CastOptions? options = null)
+    {
+        ArgumentNullException.ThrowIfNull(data);
+        return Caster.Cast(data, @params, permitted, options ?? CastOptions.Default);
+    }
+
+    /// <summary>
+    /// Cast with compile-time safe field selection using an expression.
+    /// <code>Changeset&lt;User&gt;.Cast(params, u => new { u.Name, u.Email })</code>
+    /// </summary>
+    public static Changeset<T> Cast(
+        IReadOnlyDictionary<string, object?> @params,
+        Expression<Func<T, object>> fields,
+        CastOptions? options = null)
+    {
+        var permitted = ExpressionFieldExtractor.ExtractFieldNames(fields);
+        return Caster.Cast<T>(null, @params, permitted, options ?? CastOptions.Default);
+    }
+
+    /// <summary>
+    /// Cast with compile-time safe field selection using an expression (update variant).
+    /// <code>Changeset&lt;User&gt;.Cast(existingUser, params, u => new { u.Name, u.Email })</code>
+    /// </summary>
+    public static Changeset<T> Cast(
+        T data,
+        IReadOnlyDictionary<string, object?> @params,
+        Expression<Func<T, object>> fields,
+        CastOptions? options = null)
+    {
+        ArgumentNullException.ThrowIfNull(data);
+        var permitted = ExpressionFieldExtractor.ExtractFieldNames(fields);
+        return Caster.Cast(data, @params, permitted, options ?? CastOptions.Default);
+    }
 }

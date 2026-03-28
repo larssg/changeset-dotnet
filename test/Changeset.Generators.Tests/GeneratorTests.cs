@@ -1,5 +1,4 @@
 using Changeset;
-using ChangesetFactory = Changeset.Changeset;
 
 namespace Changeset.Generators.Tests;
 
@@ -70,7 +69,7 @@ public class GeneratorTests
     {
         // The generated applier is auto-registered via module initializer,
         // so ApplyChanges should use it instead of reflection
-        var cs = ChangesetFactory.Cast<Product>(
+        var cs = Changeset<Product>.Cast(
             new Dictionary<string, object?> { ["Name"] = "Gadget", ["Price"] = 19.99m },
             ["Name", "Price"]);
 
@@ -84,7 +83,7 @@ public class GeneratorTests
     public void ApplyChanges_Update_UsesGeneratedApplier()
     {
         var existing = new Product { Id = 5, Name = "Old", Price = 10m, Stock = 20 };
-        var cs = ChangesetFactory.Cast(existing,
+        var cs = Changeset<Product>.Cast(existing,
             new Dictionary<string, object?> { ["Price"] = 15m },
             ["Price"]);
 

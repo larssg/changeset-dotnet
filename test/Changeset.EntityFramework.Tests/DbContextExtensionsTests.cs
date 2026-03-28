@@ -1,4 +1,4 @@
-using ChangesetFactory = Changeset.Changeset;
+using Changeset;
 using Changeset.EntityFramework;
 using Microsoft.EntityFrameworkCore;
 
@@ -36,7 +36,7 @@ public class DbContextExtensionsTests : IDisposable
     [Fact]
     public void ApplyTo_Insert_AddsEntityToContext()
     {
-        var cs = ChangesetFactory.Cast<TestUser>(
+        var cs = Changeset<TestUser>.Cast(
             new Dictionary<string, object?> { ["Name"] = "Alice", ["Email"] = "alice@test.com", ["Age"] = 30 },
             ["Name", "Email", "Age"]);
 
@@ -51,7 +51,7 @@ public class DbContextExtensionsTests : IDisposable
     [Fact]
     public async Task ApplyToAsync_Insert_SavesEntity()
     {
-        var cs = ChangesetFactory.Cast<TestUser>(
+        var cs = Changeset<TestUser>.Cast(
             new Dictionary<string, object?> { ["Name"] = "Bob", ["Email"] = "bob@test.com" },
             ["Name", "Email"]);
 
@@ -68,7 +68,7 @@ public class DbContextExtensionsTests : IDisposable
         _db.SaveChanges();
         _db.Entry(existing).State = EntityState.Unchanged;
 
-        var cs = ChangesetFactory.Cast(existing,
+        var cs = Changeset<TestUser>.Cast(existing,
             new Dictionary<string, object?> { ["Name"] = "New" },
             ["Name", "Email"]);
 
@@ -84,7 +84,7 @@ public class DbContextExtensionsTests : IDisposable
     [Fact]
     public void ApplyTo_InvalidChangeset_Throws()
     {
-        var cs = ChangesetFactory.Cast<TestUser>(
+        var cs = Changeset<TestUser>.Cast(
             new Dictionary<string, object?> { ["Name"] = "X" },
             ["Name"]);
         cs = cs.AddError("Name", "too short", "length");
@@ -98,7 +98,7 @@ public class DbContextExtensionsTests : IDisposable
         _db.Users.Add(new TestUser { Name = "Alice", Email = "alice@test.com" });
         _db.SaveChanges();
 
-        var cs = ChangesetFactory.Cast<TestUser>(
+        var cs = Changeset<TestUser>.Cast(
             new Dictionary<string, object?> { ["Email"] = "bob@test.com" },
             ["Email"]);
 
@@ -112,7 +112,7 @@ public class DbContextExtensionsTests : IDisposable
         _db.Users.Add(new TestUser { Name = "Alice", Email = "alice@test.com" });
         _db.SaveChanges();
 
-        var cs = ChangesetFactory.Cast<TestUser>(
+        var cs = Changeset<TestUser>.Cast(
             new Dictionary<string, object?> { ["Email"] = "alice@test.com" },
             ["Email"]);
 
@@ -128,7 +128,7 @@ public class DbContextExtensionsTests : IDisposable
         _db.Users.Add(existing);
         _db.SaveChanges();
 
-        var cs = ChangesetFactory.Cast(existing,
+        var cs = Changeset<TestUser>.Cast(existing,
             new Dictionary<string, object?> { ["Email"] = "alice@test.com" },
             ["Email"]);
 
@@ -139,7 +139,7 @@ public class DbContextExtensionsTests : IDisposable
     [Fact]
     public void ValidateUnique_FieldNotInChanges_Skipped()
     {
-        var cs = ChangesetFactory.Cast<TestUser>(
+        var cs = Changeset<TestUser>.Cast(
             new Dictionary<string, object?> { ["Name"] = "Alice" },
             ["Name"]);
 
