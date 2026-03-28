@@ -309,4 +309,137 @@ public class ValidatorTests
         Assert.True(cs.IsValid);       // original untouched
         Assert.False(validated.IsValid); // new instance has error
     }
+
+    [Fact]
+    public void ValidateRequired_ZeroInt_Passes()
+    {
+        var cs = Changeset<User>.Cast(
+            new Dictionary<string, object?> { ["Age"] = 0 }, ["Age"])
+            .ValidateRequired(["Age"]);
+
+        Assert.True(cs.IsValid);
+    }
+
+    [Fact]
+    public void ValidateRequired_FalseBool_Passes()
+    {
+        var cs = Changeset<User>.Cast(
+            new Dictionary<string, object?> { ["IsActive"] = false }, ["IsActive"])
+            .ValidateRequired(["IsActive"]);
+
+        Assert.True(cs.IsValid);
+    }
+
+    [Fact]
+    public void ValidateLength_NullValueInChanges_Skips()
+    {
+        var cs = Changeset<User>.Cast(
+            new Dictionary<string, object?> { ["BirthDate"] = null }, ["BirthDate"])
+            .ValidateLength("BirthDate", min: 1);
+
+        // null is not a string/collection/enumerable — should skip validation
+        Assert.True(cs.IsValid);
+    }
+
+    [Fact]
+    public void ValidateLength_NonStringNonCollection_Skips()
+    {
+        var cs = Changeset<User>.Cast(
+            new Dictionary<string, object?> { ["Age"] = 42 }, ["Age"])
+            .ValidateLength("Age", min: 1);
+
+        // int is not string/collection/enumerable — should return changeset as-is
+        Assert.True(cs.IsValid);
+    }
+
+    [Fact]
+    public void ValidateNumber_ExactlyEqualToGreaterThan_Fails()
+    {
+        var cs = Changeset<User>.Cast(
+            new Dictionary<string, object?> { ["Age"] = 18 }, ["Age"])
+            .ValidateNumber("Age", greaterThan: 18);
+
+        Assert.False(cs.IsValid);
+        Assert.Equal("number", cs.ErrorsOn("Age")[0].Code);
+    }
+
+    [Fact]
+    public void ValidateNumber_ExactlyEqualToGreaterThanOrEqual_Passes()
+    {
+        var cs = Changeset<User>.Cast(
+            new Dictionary<string, object?> { ["Age"] = 18 }, ["Age"])
+            .ValidateNumber("Age", greaterThanOrEqual: 18);
+
+        Assert.True(cs.IsValid);
+    }
+
+    [Fact]
+    public void ValidateFormat_NullValueInChanges_Skips()
+    {
+        var cs = Changeset<User>.Cast(
+            new Dictionary<string, object?> { ["BirthDate"] = null }, ["BirthDate"])
+            .ValidateFormat("BirthDate", @"^\d+$");
+
+        // null is not a string — TryGetValue succeeds but value is not string, so skipped
+        Assert.True(cs.IsValid);
+    }
+
+    [Fact]
+    public void ValidateConfirmation_ConfirmationPresent_MainFieldNotInChanges_Skips()
+    {
+        var @params = new Dictionary<string, object?>
+        {
+            ["Email_confirmation"] = "alice@example.com"
+        };
+
+        var cs = Changeset<User>.Cast(@params, ["Email"])
+            .ValidateConfirmation("Email");
+
+        // Email not in changes, so confirmation validation is skipped
+        Assert.True(cs.IsValid);
+    }
+
+    [Fact]
+    public void ValidateInclusion_EmptyAllowedSet_Fails()
+    {
+        var cs = Changeset<User>.Cast(
+            new Dictionary<string, object?> { ["Role"] = UserRole.Admin }, ["Role"])
+            .ValidateInclusion("Role", []);
+
+        Assert.False(cs.IsValid);
+        Assert.Equal("inclusion", cs.ErrorsOn("Role")[0].Code);
+    }
+
+    [Fact]
+    public void ValidateExclusion_EmptyDisallowedSet_Passes()
+    {
+        var cs = Changeset<User>.Cast(
+            new Dictionary<string, object?> { ["Name"] = "anything" }, ["Name"])
+            .ValidateExclusion("Name", []);
+
+        Assert.True(cs.IsValid);
+    }
+
+    [Fact]
+    public async Task ChainAsyncAndSyncValidators_InOnePipeline()
+    {
+        var @params = new Dictionary<string, object?>
+        {
+            ["Name"] = "Alice",
+            ["Email"] = "alice@example.com"
+        };
+
+        var cs = await Changeset<User>.Cast(@params, ["Name", "Email"])
+            .ValidateRequired(["Name", "Email"])
+            .ValidateChangeAsync("Name", async (changeset, value) =>
+            {
+                await Task.Delay(1); // simulate async check
+                if (value is string s && s.Length < 2)
+                    return changeset.AddError("Name", "too short", "async_length");
+                return changeset;
+            })
+            .ValidateAsync(c => c.ValidateFormat("Email", @"^[^@]+@[^@]+\.[^@]+$"));
+
+        Assert.True(cs.IsValid);
+    }
 }
