@@ -1,0 +1,133 @@
+using System.Reflection;
+using Microsoft.EntityFrameworkCore;
+
+namespace Changeset.EntityFramework;
+
+public static class DbContextExtensions
+{
+    /// <summary>
+    /// Applies a valid changeset to the DbContext. For inserts, adds a new entity.
+    /// For updates, attaches and marks only changed properties as modified.
+    /// Returns the tracked entity.
+    /// </summary>
+    public static T ApplyTo<T>(this Changeset<T> changeset, DbContext context) where T : class, new()
+    {
+        if (!changeset.IsValid)
+            throw new InvalidOperationException(
+                $"Cannot apply an invalid changeset to DbContext. " +
+                $"Changeset has {changeset.Errors.Length} error(s).");
+
+        if (changeset.Action == ChangesetAction.Insert)
+        {
+            var entity = changeset.ApplyChanges();
+            context.Set<T>().Add(entity);
+            return entity;
+        }
+
+        // Update: attach the existing entity and mark only changed fields as modified
+        var existing = changeset.Data
+            ?? throw new InvalidOperationException("Update changeset must have Data set.");
+
+        var entry = context.Entry(existing);
+        if (entry.State == EntityState.Detached)
+            context.Set<T>().Attach(existing);
+
+        var properties = typeof(T).GetProperties(BindingFlags.Public | BindingFlags.Instance);
+        var propMap = properties
+            .Where(p => p.CanWrite)
+            .ToDictionary(p => p.Name, StringComparer.Ordinal);
+
+        foreach (var (field, value) in changeset.Changes)
+        {
+            if (propMap.TryGetValue(field, out var prop))
+            {
+                prop.SetValue(existing, value);
+                entry.Property(field).IsModified = true;
+            }
+        }
+
+        return existing;
+    }
+
+    /// <summary>
+    /// Applies a valid changeset and calls SaveChangesAsync.
+    /// </summary>
+    public static async Task<T> ApplyToAsync<T>(
+        this Changeset<T> changeset, DbContext context,
+        CancellationToken cancellationToken = default) where T : class, new()
+    {
+        var entity = changeset.ApplyTo(context);
+        await context.SaveChangesAsync(cancellationToken);
+        return entity;
+    }
+
+    /// <summary>
+    /// Validates that a field value is unique in the database.
+    /// Excludes the current entity (if updating) from the uniqueness check.
+    /// </summary>
+    public static Changeset<T> ValidateUnique<T>(
+        this Changeset<T> changeset, string field, DbContext context,
+        string? message = null) where T : class
+    {
+        if (!changeset.Changes.TryGetValue(field, out var value))
+            return changeset;
+
+        var prop = typeof(T).GetProperty(field, BindingFlags.Public | BindingFlags.Instance);
+        if (prop is null)
+            return changeset;
+
+        // Build a query that checks for existing entities with the same field value
+        var set = context.Set<T>();
+        var exists = set.AsNoTracking()
+            .AsEnumerable()
+            .Any(e =>
+            {
+                var existingValue = prop.GetValue(e);
+                if (!Equals(existingValue, value))
+                    return false;
+
+                // Exclude the current entity if updating
+                if (changeset.Data is not null)
+                    return !ReferenceEquals(e, changeset.Data) && !Equals(e, changeset.Data);
+
+                return true;
+            });
+
+        if (exists)
+            return changeset.AddError(field, message ?? "has already been taken", "uniqueness");
+
+        return changeset;
+    }
+
+    /// <summary>
+    /// Async version of ValidateUnique that uses EF Core's async query capabilities.
+    /// Uses a compiled expression for efficient DB-side filtering.
+    /// </summary>
+    public static async Task<Changeset<T>> ValidateUniqueAsync<T>(
+        this Changeset<T> changeset, string field, DbContext context,
+        string? message = null, CancellationToken cancellationToken = default) where T : class
+    {
+        if (!changeset.Changes.TryGetValue(field, out var value))
+            return changeset;
+
+        var prop = typeof(T).GetProperty(field, BindingFlags.Public | BindingFlags.Instance);
+        if (prop is null)
+            return changeset;
+
+        var exists = await context.Set<T>().AsNoTracking()
+            .AnyAsync(e => EF.Property<object>(e, field) == value, cancellationToken);
+
+        if (exists && changeset.Data is not null)
+        {
+            // Check if it's the same entity
+            var currentValue = prop.GetValue(changeset.Data);
+            if (Equals(currentValue, value))
+                return changeset; // Same entity, same value — not a conflict
+        }
+
+        if (exists)
+            return changeset.AddError(field, message ?? "has already been taken", "uniqueness");
+
+        return changeset;
+    }
+}
