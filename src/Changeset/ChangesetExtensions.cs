@@ -1,9 +1,35 @@
+using System.Collections.Concurrent;
 using System.Reflection;
 
 namespace Changeset;
 
 public static class ChangesetExtensions
 {
+    private static readonly ConcurrentDictionary<Type, PropertyInfo[]> ReadWritePropertyCache = new();
+    private static readonly ConcurrentDictionary<Type, Dictionary<string, PropertyInfo>> WritablePropertyMapCache = new();
+
+    private static PropertyInfo[] GetReadWriteProperties(Type type)
+    {
+        return ReadWritePropertyCache.GetOrAdd(type, static t =>
+            t.GetProperties(BindingFlags.Public | BindingFlags.Instance)
+                .Where(p => p.CanRead && p.CanWrite)
+                .ToArray());
+    }
+
+    private static Dictionary<string, PropertyInfo> GetWritablePropertyMap(Type type)
+    {
+        return WritablePropertyMapCache.GetOrAdd(type, static t =>
+        {
+            var map = new Dictionary<string, PropertyInfo>(StringComparer.Ordinal);
+            foreach (var p in t.GetProperties(BindingFlags.Public | BindingFlags.Instance))
+            {
+                if (p.CanWrite)
+                    map[p.Name] = p;
+            }
+            return map;
+        });
+    }
+
     public static T ApplyChanges<T>(this Changeset<T> changeset) where T : class, new()
     {
         if (!changeset.IsValid)
@@ -66,13 +92,7 @@ public static class ChangesetExtensions
     private static void ApplyChangesToTarget<T>(
         T target, IReadOnlyDictionary<string, object?> changes) where T : class
     {
-        var properties = typeof(T).GetProperties(BindingFlags.Public | BindingFlags.Instance);
-        var propMap = new Dictionary<string, PropertyInfo>(StringComparer.Ordinal);
-        foreach (var p in properties)
-        {
-            if (p.CanWrite)
-                propMap[p.Name] = p;
-        }
+        var propMap = GetWritablePropertyMap(typeof(T));
 
         foreach (var (field, value) in changes)
         {
@@ -97,10 +117,9 @@ public static class ChangesetExtensions
                 $"Use ApplyChanges(factory) with a factory function that creates the instance.");
         }
 
-        foreach (var prop in type.GetProperties(BindingFlags.Public | BindingFlags.Instance))
+        foreach (var prop in GetReadWriteProperties(type))
         {
-            if (prop.CanRead && prop.CanWrite)
-                prop.SetValue(clone, prop.GetValue(source));
+            prop.SetValue(clone, prop.GetValue(source));
         }
 
         return (T)clone;

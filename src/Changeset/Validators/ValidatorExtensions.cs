@@ -12,24 +12,13 @@ public static class ValidatorExtensions
         var cs = changeset;
         foreach (var field in fields)
         {
-            if (!cs.Changes.TryGetValue(field, out var value) && !cs.CastFields.Contains(field))
-            {
-                // Field wasn't even in the params — it's required
-                cs = cs.AddError(field, "can't be blank", "required");
-                continue;
-            }
-
-            if (!cs.Changes.ContainsKey(field))
+            if (!cs.Changes.TryGetValue(field, out var value))
             {
                 cs = cs.AddError(field, "can't be blank", "required");
                 continue;
             }
 
-            if (value is null)
-            {
-                cs = cs.AddError(field, "can't be blank", "required");
-            }
-            else if (value is string str && string.IsNullOrWhiteSpace(str))
+            if (value is null || (value is string str && string.IsNullOrWhiteSpace(str)))
             {
                 cs = cs.AddError(field, "can't be blank", "required");
             }

@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Collections.Immutable;
 using System.Reflection;
 
@@ -5,6 +6,8 @@ namespace Changeset.Casting;
 
 internal static class Caster
 {
+    private static readonly ConcurrentDictionary<(Type, bool), Dictionary<string, PropertyInfo>> PropertyCache = new();
+
     public static Changeset<T> Cast<T>(
         T? data,
         IReadOnlyDictionary<string, object?> @params,
@@ -20,7 +23,8 @@ internal static class Caster
         var castFieldsBuilder = ImmutableHashSet.CreateBuilder<string>();
         var errorsBuilder = ImmutableArray.CreateBuilder<ChangesetError>();
 
-        var paramsDict = @params.ToImmutableDictionary();
+        var paramsDict = @params as ImmutableDictionary<string, object?>
+            ?? @params.ToImmutableDictionary();
 
         if (options.StrictCasting)
         {
@@ -114,15 +118,18 @@ internal static class Caster
 
     private static Dictionary<string, PropertyInfo> GetPropertyMap<T>(bool caseInsensitive)
     {
-        var comparer = caseInsensitive ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal;
-        var result = new Dictionary<string, PropertyInfo>(comparer);
-
-        foreach (var prop in typeof(T).GetProperties(BindingFlags.Public | BindingFlags.Instance))
+        return PropertyCache.GetOrAdd((typeof(T), caseInsensitive), static key =>
         {
-            if (prop.CanWrite)
-                result[prop.Name] = prop;
-        }
+            var comparer = key.Item2 ? StringComparer.OrdinalIgnoreCase : StringComparer.Ordinal;
+            var result = new Dictionary<string, PropertyInfo>(comparer);
 
-        return result;
+            foreach (var prop in key.Item1.GetProperties(BindingFlags.Public | BindingFlags.Instance))
+            {
+                if (prop.CanWrite)
+                    result[prop.Name] = prop;
+            }
+
+            return result;
+        });
     }
 }
