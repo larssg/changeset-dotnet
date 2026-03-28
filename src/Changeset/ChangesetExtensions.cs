@@ -12,6 +12,15 @@ public static class ChangesetExtensions
                 $"Changeset has {changeset.Errors.Length} error(s). " +
                 $"Check IsValid before calling ApplyChanges().");
 
+        // Use generated applier if available (no reflection)
+        var applier = ChangesetApplierRegistry.Get<T>();
+        if (applier is not null)
+        {
+            return changeset.Data is not null
+                ? applier.Apply(changeset.Data, changeset.Changes)
+                : applier.Create(changeset.Changes);
+        }
+
         var target = changeset.Data is not null
             ? ShallowClone(changeset.Data)
             : new T();
