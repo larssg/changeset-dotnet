@@ -55,6 +55,20 @@ public class ApplyChangesTests
     }
 
     [Fact]
+    public void ApplyChanges_NoParameterlessConstructor_NoFactory_ThrowsClearError()
+    {
+        var existing = new NoDefaultConstructor("Alice") { Email = "alice@example.com" };
+        var @params = new Dictionary<string, object?> { ["Name"] = "Bob" };
+        var cs = Changeset<NoDefaultConstructor>.Cast(existing, @params, ["Name"]);
+
+        // Update path calls ShallowClone which uses Activator.CreateInstance — fails without parameterless ctor
+        var ex = Assert.Throws<InvalidOperationException>(
+            () => cs.ApplyChanges(() => new NoDefaultConstructor("default")));
+        Assert.Contains("does not have a parameterless constructor", ex.Message);
+        Assert.Contains("NoDefaultConstructor", ex.Message);
+    }
+
+    [Fact]
     public void ToResult_Valid_ReturnsValidResult()
     {
         var @params = new Dictionary<string, object?>
