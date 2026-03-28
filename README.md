@@ -45,6 +45,20 @@ var cs = Changeset<User>.Cast(params, u => new { u.Name, u.Email });
 
 Type coercion handles string-to-number, string-to-bool, string-to-DateTime, `JsonElement` unwrapping, nullable types, and checked numeric narrowing. Cast failures produce errors, never exceptions.
 
+### Cast Options
+
+```csharp
+var options = new CastOptions
+{
+    TrimStrings = true,              // Trim whitespace from string values (default: true)
+    CaseInsensitiveFields = true,    // Match field names case-insensitively (default: true)
+    StrictCasting = false,           // Error on unpermitted fields instead of ignoring (default: false)
+    FormatProvider = CultureInfo.InvariantCulture  // Culture for number/date parsing (default: InvariantCulture)
+};
+
+var cs = Changeset<User>.Cast(params, ["Name", "Email"], options);
+```
+
 ## Validation
 
 Validators are pure functions composed via method chaining. Each returns a new immutable changeset (or the same instance if no error was added).
