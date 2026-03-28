@@ -8,7 +8,7 @@ Ecto-style changesets for C#. Cast untyped input into typed models, validate wit
 using Changeset;
 using Changeset.Validators;
 
-var cs = Changeset.Cast<User>(params, u => new { u.Name, u.Email, u.Age })
+var cs = Changeset<User>.Cast(params, u => new { u.Name, u.Email, u.Age })
     .ValidateRequired(["Name", "Email"])
     .ValidateFormat("Email", @"^[^@]+@[^@]+\.[^@]+$")
     .ValidateLength("Name", min: 2, max: 100)
@@ -34,13 +34,13 @@ Casting converts untyped `Dictionary<string, object?>` input into typed field va
 
 ```csharp
 // Insert — creates a new changeset
-var cs = Changeset.Cast<User>(params, ["Name", "Email", "Age"]);
+var cs = Changeset<User>.Cast(params, ["Name", "Email", "Age"]);
 
 // Update — only includes fields that actually changed
-var cs = Changeset.Cast(existingUser, params, ["Name", "Email"]);
+var cs = Changeset<User>.Cast(existingUser, params, ["Name", "Email"]);
 
 // Expression syntax — compile-time safe field names
-var cs = Changeset.Cast<User>(params, u => new { u.Name, u.Email });
+var cs = Changeset<User>.Cast(params, u => new { u.Name, u.Email });
 ```
 
 Type coercion handles string-to-number, string-to-bool, string-to-DateTime, `JsonElement` unwrapping, nullable types, and checked numeric narrowing. Cast failures produce errors, never exceptions.
@@ -50,7 +50,7 @@ Type coercion handles string-to-number, string-to-bool, string-to-DateTime, `Jso
 Validators are pure functions composed via method chaining. Each returns a new immutable changeset (or the same instance if no error was added).
 
 ```csharp
-var cs = Changeset.Cast<User>(params, ["Name", "Email", "Age"])
+var cs = Changeset<User>.Cast(params, ["Name", "Email", "Age"])
     .ValidateRequired(["Name", "Email"])
     .ValidateFormat("Email", @"^[^@]+@[^@]+\.[^@]+$")
     .ValidateLength("Name", min: 2, max: 100)
@@ -65,7 +65,7 @@ var cs = Changeset.Cast<User>(params, ["Name", "Email", "Age"])
 Async validators for I/O-bound checks:
 
 ```csharp
-var cs = await Changeset.Cast<User>(params, ["Email"])
+var cs = await Changeset<User>.Cast(params, ["Email"])
     .ValidateChangeAsync("Email", async (cs, value) =>
     {
         if (await db.Users.AnyAsync(u => u.Email == (string)value!))
@@ -77,7 +77,7 @@ var cs = await Changeset.Cast<User>(params, ["Email"])
 ### Nested Changesets
 
 ```csharp
-var cs = Changeset.Cast<UserWithAddress>(params, ["Name"])
+var cs = Changeset<UserWithAddress>.Cast(params, ["Name"])
     .CastAssoc<UserWithAddress, Address>("Address", ["Street", "City", "Zip"])
     .ValidateAssoc<UserWithAddress, Address>("Address", addressCs =>
         addressCs.ValidateRequired(["Street", "City"]));
