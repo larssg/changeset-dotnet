@@ -1,6 +1,7 @@
 using ChangesetFactory = Changeset.Changeset;
 using Changeset.EntityFramework;
 using Changeset.Validators;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
 
 namespace Changeset.EntityFramework.Tests;
 
@@ -56,5 +57,37 @@ public class AspNetCoreExtensionsTests
         var details = cs.ToProblemDetails();
 
         Assert.True(details.Errors.ContainsKey("Name"));
+    }
+
+    [Fact]
+    public void AddToModelState_AddsAllErrors()
+    {
+        var cs = ChangesetFactory.Cast<TestUser>(
+            new Dictionary<string, object?> { ["Name"] = "", ["Email"] = "bad" },
+            ["Name", "Email"])
+            .ValidateRequired(["Name"])
+            .ValidateFormat("Email", @"^[^@]+@[^@]+\.[^@]+$");
+
+        var modelState = new ModelStateDictionary();
+        cs.AddToModelState(modelState);
+
+        Assert.False(modelState.IsValid);
+        Assert.True(modelState.ContainsKey("Name"));
+        Assert.True(modelState.ContainsKey("Email"));
+        Assert.Equal("can't be blank", modelState["Name"]!.Errors[0].ErrorMessage);
+        Assert.Equal("has invalid format", modelState["Email"]!.Errors[0].ErrorMessage);
+    }
+
+    [Fact]
+    public void AddToModelState_ValidChangeset_NoErrors()
+    {
+        var cs = ChangesetFactory.Cast<TestUser>(
+            new Dictionary<string, object?> { ["Name"] = "Alice" },
+            ["Name"]);
+
+        var modelState = new ModelStateDictionary();
+        cs.AddToModelState(modelState);
+
+        Assert.True(modelState.IsValid);
     }
 }

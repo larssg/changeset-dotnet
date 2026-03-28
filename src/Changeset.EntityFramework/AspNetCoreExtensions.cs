@@ -1,5 +1,6 @@
 using System.Collections.Immutable;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
 
 namespace Changeset.EntityFramework;
 
@@ -37,5 +38,17 @@ public static class AspNetCoreExtensions
         this Changeset<T> changeset) where T : class
     {
         return new HttpValidationProblemDetails(changeset.ToValidationErrors());
+    }
+
+    /// <summary>
+    /// Adds changeset errors to a ModelStateDictionary for use in MVC controllers.
+    /// </summary>
+    public static void AddToModelState<T>(
+        this Changeset<T> changeset, ModelStateDictionary modelState) where T : class
+    {
+        foreach (var error in changeset.Errors)
+        {
+            modelState.AddModelError(error.Field, error.Message);
+        }
     }
 }
