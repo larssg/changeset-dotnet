@@ -1,48 +1,62 @@
 # Changeset.NET
 
-Ecto-style changesets for C#. Cast untyped input into typed models, validate with a composable pipeline, and apply changes — all immutable, all without exceptions.
+Changeset.NET provides an immutable boundary between untrusted input and your
+C# domain models.
 
 ```csharp
-using Changeset;
-using Changeset.Validators;
+var changeset = Changeset<User>
+    .Cast(parameters, user => new { user.Name, user.Email, user.Age })
+    .ValidateRequired(user => new { user.Name, user.Email })
+    .ValidateFormat(user => user.Email, emailPattern)
+    .ValidateNumber(user => user.Age, greaterThanOrEqual: 0);
 
-var cs = Changeset<User>.Cast(params, u => new { u.Name, u.Email, u.Age })
-    .ValidateRequired(u => new { u.Name, u.Email })
-    .ValidateFormat(u => u.Email, @"^[^@]+@[^@]+\.[^@]+$")
-    .ValidateLength(u => u.Name, min: 2, max: 100)
-    .ValidateNumber(u => u.Age, greaterThanOrEqual: 0, lessThan: 150);
-
-if (cs.IsValid)
-{
-    User user = cs.ApplyChanges();
-}
+return changeset.IsValid
+    ? Results.Ok(changeset.ApplyChanges())
+    : Results.ValidationProblem(changeset.ToValidationErrors());
 ```
 
-## Packages
+## Why use a changeset?
 
-| Package | Purpose |
+Request data, form values, imported records, and message payloads are not domain
+objects yet. A changeset keeps the steps between those two forms visible:
+
+1. **Cast** only explicitly permitted fields and coerce their values.
+2. **Validate** the proposed changes with a composable pipeline.
+3. **Inspect** changes and structured errors without mutating the model.
+4. **Apply** a valid changeset when the caller decides it is safe.
+
+This is useful for create forms, partial updates, API endpoints, imports, and
+other boundaries where input must be filtered before it reaches application
+state.
+
+!!! note
+
+    Casting and validation failures are represented by `ChangesetError`
+    values. Calling `ApplyChanges` on an invalid changeset is a programmer
+    error and throws `InvalidOperationException`; check `IsValid` or use
+    `ToResult` first.
+
+## Choose your packages
+
+| Package | Provides |
 |---|---|
-| `Changeset` | Core library — casting, validation, error handling |
-| `Changeset.EntityFramework` | EF Core integration — `ApplyTo`, `ValidateUnique`, ASP.NET Core helpers |
-| `Changeset.Generators` | Source generator — reflection-free property setting, field name analyzer |
+| `Changeset` | The core changeset type, casting, validators, associations, errors, and applying |
+| `Changeset.EntityFramework` | `ApplyTo`, uniqueness validation, Minimal API results, `ProblemDetails`, and `ModelState` helpers |
+| `Changeset.Generators` | Generated property appliers and diagnostics for string field lists passed to `Cast` |
 
-## Why changesets?
+The core and EF Core packages target .NET 10.
 
-Changesets separate the concerns of *receiving* untrusted input, *validating* it, and *applying* it to your domain models:
+## Where to begin
 
-- **Casting** filters and coerces raw input (`Dictionary<string, object?>`) into typed field values — only permitted fields get through.
-- **Validation** is a pipeline of pure functions. Each validator returns a new immutable changeset; errors accumulate instead of throwing.
-- **Applying** produces your model only when you decide to — and only if the changeset is valid.
-
-Head to [Getting Started](getting-started.md) to install the packages, or dive into the guide:
-
-- [Casting](casting.md) — turning untyped input into typed field values
-- [Validation](validation.md) — the validator pipeline, async validators, nested changesets
-- [Errors](errors.md) — inspecting and serializing errors
-- [Applying Changes](applying-changes.md) — materializing models and result types
-- [EF Core & ASP.NET Core](ef-core.md) — database persistence and web framework helpers
-- [Source Generator](source-generator.md) — reflection-free property setting and compile-time field checks
-
-## License
-
-MIT
+- Follow [Getting Started](getting-started.md) for a complete create and update
+  example.
+- Read [The Changeset Lifecycle](lifecycle.md) to understand the state held by
+  a changeset.
+- Use [Casting](casting.md) for the input allowlist, conversion matrix, and
+  cast options.
+- Use [Validation](validation.md) for built-in, custom, and asynchronous
+  validators.
+- See [Errors](errors.md) and [Applying Changes](applying-changes.md) for the
+  two possible outcomes.
+- Continue to [EF Core & ASP.NET Core](ef-core.md) or the
+  [Source Generator](source-generator.md) when you need integrations.

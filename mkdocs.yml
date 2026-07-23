@@ -33,11 +33,13 @@ markdown_extensions:
 nav:
   - Home: index.md
   - Getting Started: getting-started.md
-  - Guide:
+  - Core Concepts:
+      - The Changeset Lifecycle: lifecycle.md
       - Casting: casting.md
       - Validation: validation.md
       - Errors: errors.md
       - Applying Changes: applying-changes.md
+      - Associations: associations.md
   - Integrations:
       - EF Core & ASP.NET Core: ef-core.md
       - Source Generator: source-generator.md
