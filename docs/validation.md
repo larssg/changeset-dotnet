@@ -4,14 +4,14 @@ Validators are pure functions composed via method chaining. Each returns a new i
 
 ```csharp
 var cs = Changeset<User>.Cast(params, ["Name", "Email", "Age"])
-    .ValidateRequired(["Name", "Email"])
-    .ValidateFormat("Email", @"^[^@]+@[^@]+\.[^@]+$")
-    .ValidateLength("Name", min: 2, max: 100)
-    .ValidateNumber("Age", greaterThanOrEqual: 0, lessThan: 150)
-    .ValidateInclusion("Role", ["admin", "member", "guest"])
-    .ValidateExclusion("Name", ["admin", "root"])
-    .ValidateConfirmation("Password")
-    .ValidateChange("Email", (cs, value) => /* custom logic */ cs)
+    .ValidateRequired(u => new { u.Name, u.Email })
+    .ValidateFormat(u => u.Email, @"^[^@]+@[^@]+\.[^@]+$")
+    .ValidateLength(u => u.Name, min: 2, max: 100)
+    .ValidateNumber(u => u.Age, greaterThanOrEqual: 0, lessThan: 150)
+    .ValidateInclusion(u => u.Role, ["admin", "member", "guest"])
+    .ValidateExclusion(u => u.Name, ["admin", "root"])
+    .ValidateConfirmation(u => u.Password)
+    .ValidateChange(u => u.Email, (cs, value) => /* custom logic */ cs)
     .Validate(cs => /* whole-changeset logic */ cs);
 ```
 
@@ -29,13 +29,34 @@ var cs = Changeset<User>.Cast(params, ["Name", "Email", "Age"])
 | `ValidateChange` | Custom per-field logic |
 | `Validate` | Custom whole-changeset logic |
 
+### Compile-time safe field selection
+
+All field-based validators accept property expressions, catching renamed or
+misspelled properties at compile time. Select multiple required fields with an
+anonymous object:
+
+```csharp
+var cs = Changeset<User>.Cast(params, u => new { u.Name, u.Email, u.Age })
+    .ValidateRequired(u => new { u.Name, u.Email })
+    .ValidateFormat(u => u.Email, emailPattern)
+    .ValidateLength(u => u.Name, min: 2, max: 100)
+    .ValidateNumber(u => u.Age, greaterThanOrEqual: 0);
+```
+
+String overloads remain available when field names are determined at runtime:
+
+```csharp
+var cs = Changeset<User>.Cast(params, ["Name"])
+    .ValidateLength("Name", min: 2, max: 100);
+```
+
 ## Async validators
 
 Use async validators for I/O-bound checks:
 
 ```csharp
 var cs = await Changeset<User>.Cast(params, ["Email"])
-    .ValidateChangeAsync("Email", async (cs, value) =>
+    .ValidateChangeAsync(u => u.Email, async (cs, value) =>
     {
         if (await db.Users.AnyAsync(u => u.Email == (string)value!))
             return cs.AddError("Email", "has already been taken", "uniqueness");

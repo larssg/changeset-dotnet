@@ -7,10 +7,10 @@ using Changeset;
 using Changeset.Validators;
 
 var cs = Changeset<User>.Cast(params, u => new { u.Name, u.Email, u.Age })
-    .ValidateRequired(["Name", "Email"])
-    .ValidateFormat("Email", @"^[^@]+@[^@]+\.[^@]+$")
-    .ValidateLength("Name", min: 2, max: 100)
-    .ValidateNumber("Age", greaterThanOrEqual: 0, lessThan: 150);
+    .ValidateRequired(u => new { u.Name, u.Email })
+    .ValidateFormat(u => u.Email, @"^[^@]+@[^@]+\.[^@]+$")
+    .ValidateLength(u => u.Name, min: 2, max: 100)
+    .ValidateNumber(u => u.Age, greaterThanOrEqual: 0, lessThan: 150);
 
 if (cs.IsValid)
 {

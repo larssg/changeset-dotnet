@@ -9,9 +9,14 @@ internal static class ExpressionFieldExtractor
     /// or a single property access like <c>u => u.Name</c>.
     /// </summary>
     public static IReadOnlyList<string> ExtractFieldNames<T>(Expression<Func<T, object>> expression)
-    {
-        var body = expression.Body;
+        => ExtractFieldNames(expression.Body);
 
+    public static IReadOnlyList<string> ExtractFieldNames<T, TValue>(
+        Expression<Func<T, TValue>> expression)
+        => ExtractFieldNames(expression.Body);
+
+    private static IReadOnlyList<string> ExtractFieldNames(Expression body)
+    {
         // Handle implicit boxing conversion: u => (object)u.Name
         if (body is UnaryExpression { NodeType: ExpressionType.Convert } unary)
             body = unary.Operand;

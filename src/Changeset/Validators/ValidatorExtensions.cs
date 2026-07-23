@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Immutable;
+using System.Linq.Expressions;
 using System.Text.RegularExpressions;
 
 namespace Changeset.Validators;
@@ -26,6 +27,14 @@ public static class ValidatorExtensions
         return cs;
     }
 
+    public static Changeset<T> ValidateRequired<T>(
+        this Changeset<T> changeset,
+        Expression<Func<T, object>> fields) where T : class
+    {
+        ArgumentNullException.ThrowIfNull(fields);
+        return changeset.ValidateRequired(ExpressionFieldExtractor.ExtractFieldNames(fields));
+    }
+
     public static Changeset<T> ValidateFormat<T>(
         this Changeset<T> changeset, string field, string pattern,
         string? message = null) where T : class
@@ -42,6 +51,11 @@ public static class ValidatorExtensions
 
         return changeset;
     }
+
+    public static Changeset<T> ValidateFormat<T, TValue>(
+        this Changeset<T> changeset, Expression<Func<T, TValue>> field,
+        string pattern, string? message = null) where T : class =>
+        changeset.ValidateFormat(FieldName(field), pattern, message);
 
     public static Changeset<T> ValidateLength<T>(
         this Changeset<T> changeset, string field,
@@ -82,6 +96,18 @@ public static class ValidatorExtensions
         return changeset;
     }
 
+    /// <summary>
+    /// Validates the length of a changed field selected with a compile-time safe expression.
+    /// </summary>
+    /// <example>
+    /// <code>changeset.ValidateLength(c => c.Name, min: 2, max: 100)</code>
+    /// </example>
+    public static Changeset<T> ValidateLength<T, TValue>(
+        this Changeset<T> changeset, Expression<Func<T, TValue>> field,
+        int? min = null, int? max = null, int? @is = null,
+        string? message = null) where T : class =>
+        changeset.ValidateLength(FieldName(field), min, max, @is, message);
+
     public static Changeset<T> ValidateNumber<T>(
         this Changeset<T> changeset, string field,
         IComparable? greaterThan = null,
@@ -117,6 +143,17 @@ public static class ValidatorExtensions
         return changeset;
     }
 
+    public static Changeset<T> ValidateNumber<T, TValue>(
+        this Changeset<T> changeset, Expression<Func<T, TValue>> field,
+        IComparable? greaterThan = null,
+        IComparable? greaterThanOrEqual = null,
+        IComparable? lessThan = null,
+        IComparable? lessThanOrEqual = null,
+        IComparable? equalTo = null,
+        string? message = null) where T : class =>
+        changeset.ValidateNumber(FieldName(field), greaterThan, greaterThanOrEqual,
+            lessThan, lessThanOrEqual, equalTo, message);
+
     public static Changeset<T> ValidateInclusion<T>(
         this Changeset<T> changeset, string field, IReadOnlyList<object> values,
         string? message = null) where T : class
@@ -130,6 +167,11 @@ public static class ValidatorExtensions
         return changeset;
     }
 
+    public static Changeset<T> ValidateInclusion<T, TValue>(
+        this Changeset<T> changeset, Expression<Func<T, TValue>> field,
+        IReadOnlyList<object> values, string? message = null) where T : class =>
+        changeset.ValidateInclusion(FieldName(field), values, message);
+
     public static Changeset<T> ValidateExclusion<T>(
         this Changeset<T> changeset, string field, IReadOnlyList<object> values,
         string? message = null) where T : class
@@ -142,6 +184,11 @@ public static class ValidatorExtensions
 
         return changeset;
     }
+
+    public static Changeset<T> ValidateExclusion<T, TValue>(
+        this Changeset<T> changeset, Expression<Func<T, TValue>> field,
+        IReadOnlyList<object> values, string? message = null) where T : class =>
+        changeset.ValidateExclusion(FieldName(field), values, message);
 
     public static Changeset<T> ValidateConfirmation<T>(
         this Changeset<T> changeset, string field,
@@ -160,6 +207,11 @@ public static class ValidatorExtensions
         return changeset;
     }
 
+    public static Changeset<T> ValidateConfirmation<T, TValue>(
+        this Changeset<T> changeset, Expression<Func<T, TValue>> field,
+        string? message = null) where T : class =>
+        changeset.ValidateConfirmation(FieldName(field), message);
+
     public static Changeset<T> ValidateChange<T>(
         this Changeset<T> changeset, string field,
         Func<Changeset<T>, object?, Changeset<T>> validator) where T : class
@@ -169,6 +221,11 @@ public static class ValidatorExtensions
 
         return validator(changeset, value);
     }
+
+    public static Changeset<T> ValidateChange<T, TValue>(
+        this Changeset<T> changeset, Expression<Func<T, TValue>> field,
+        Func<Changeset<T>, object?, Changeset<T>> validator) where T : class =>
+        changeset.ValidateChange(FieldName(field), validator);
 
     public static Changeset<T> Validate<T>(
         this Changeset<T> changeset,
@@ -187,6 +244,11 @@ public static class ValidatorExtensions
         return await validator(changeset, value);
     }
 
+    public static Task<Changeset<T>> ValidateChangeAsync<T, TValue>(
+        this Changeset<T> changeset, Expression<Func<T, TValue>> field,
+        Func<Changeset<T>, object?, Task<Changeset<T>>> validator) where T : class =>
+        changeset.ValidateChangeAsync(FieldName(field), validator);
+
     public static async Task<Changeset<T>> ValidateAsync<T>(
         this Task<Changeset<T>> changesetTask,
         Func<Changeset<T>, Changeset<T>> validator) where T : class
@@ -204,6 +266,20 @@ public static class ValidatorExtensions
             return changeset;
 
         return await validator(changeset, value);
+    }
+
+    public static async Task<Changeset<T>> ValidateChangeAsync<T, TValue>(
+        this Task<Changeset<T>> changesetTask, Expression<Func<T, TValue>> field,
+        Func<Changeset<T>, object?, Task<Changeset<T>>> validator) where T : class
+    {
+        var changeset = await changesetTask;
+        return await changeset.ValidateChangeAsync(field, validator);
+    }
+
+    private static string FieldName<T, TValue>(Expression<Func<T, TValue>> field)
+    {
+        ArgumentNullException.ThrowIfNull(field);
+        return ExpressionFieldExtractor.ExtractFieldNames(field).Single();
     }
 
     private static ImmutableDictionary<string, object> BuildLengthMetadata(

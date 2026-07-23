@@ -119,7 +119,7 @@ public class DbContextExtensionsTests : IDisposable
             new Dictionary<string, object?> { ["Email"] = "bob@test.com" },
             ["Email"]);
 
-        var result = cs.ValidateUnique("Email", _db);
+        var result = cs.ValidateUnique(u => u.Email, _db);
         Assert.True(result.IsValid);
     }
 
@@ -174,7 +174,7 @@ public class DbContextExtensionsTests : IDisposable
             new Dictionary<string, object?> { ["Email"] = null },
             ["Email"]);
 
-        var result = await cs.ValidateUniqueAsync("Email", _db);
+        var result = await cs.ValidateUniqueAsync(u => u.Email, _db);
         Assert.True(result.IsValid);
     }
 
