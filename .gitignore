@@ -6,6 +6,10 @@
 # dotenv files
 .env
 
+# Local Python environment and generated documentation
+.venv/
+site/
+
 # User-specific files
 *.rsuser
 *.suo
