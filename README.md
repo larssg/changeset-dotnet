@@ -9,10 +9,10 @@ using Changeset;
 using Changeset.Validators;
 
 var cs = Changeset<User>.Cast(params, u => new { u.Name, u.Email, u.Age })
-    .ValidateRequired(["Name", "Email"])
-    .ValidateFormat("Email", @"^[^@]+@[^@]+\.[^@]+$")
-    .ValidateLength("Name", min: 2, max: 100)
-    .ValidateNumber("Age", greaterThanOrEqual: 0, lessThan: 150);
+    .ValidateRequired(u => new { u.Name, u.Email })
+    .ValidateFormat(u => u.Email, @"^[^@]+@[^@]+\.[^@]+$")
+    .ValidateLength(u => u.Name, min: 2, max: 100)
+    .ValidateNumber(u => u.Age, greaterThanOrEqual: 0, lessThan: 150);
 
 if (cs.IsValid)
 {
@@ -65,22 +65,25 @@ Validators are pure functions composed via method chaining. Each returns a new i
 
 ```csharp
 var cs = Changeset<User>.Cast(params, ["Name", "Email", "Age"])
-    .ValidateRequired(["Name", "Email"])
-    .ValidateFormat("Email", @"^[^@]+@[^@]+\.[^@]+$")
-    .ValidateLength("Name", min: 2, max: 100)
-    .ValidateNumber("Age", greaterThanOrEqual: 0, lessThan: 150)
-    .ValidateInclusion("Role", ["admin", "member", "guest"])
-    .ValidateExclusion("Name", ["admin", "root"])
-    .ValidateConfirmation("Password")
-    .ValidateChange("Email", (cs, value) => /* custom logic */ cs)
+    .ValidateRequired(u => new { u.Name, u.Email })
+    .ValidateFormat(u => u.Email, @"^[^@]+@[^@]+\.[^@]+$")
+    .ValidateLength(u => u.Name, min: 2, max: 100)
+    .ValidateNumber(u => u.Age, greaterThanOrEqual: 0, lessThan: 150)
+    .ValidateInclusion(u => u.Role, ["admin", "member", "guest"])
+    .ValidateExclusion(u => u.Name, ["admin", "root"])
+    .ValidateConfirmation(u => u.Password)
+    .ValidateChange(u => u.Email, (cs, value) => /* custom logic */ cs)
     .Validate(cs => /* whole-changeset logic */ cs);
 ```
+
+Field-based validators support compile-time safe property selectors. String field
+names remain available when a field is determined at runtime.
 
 Async validators for I/O-bound checks:
 
 ```csharp
 var cs = await Changeset<User>.Cast(params, ["Email"])
-    .ValidateChangeAsync("Email", async (cs, value) =>
+    .ValidateChangeAsync(u => u.Email, async (cs, value) =>
     {
         if (await db.Users.AnyAsync(u => u.Email == (string)value!))
             return cs.AddError("Email", "has already been taken", "uniqueness");
@@ -145,7 +148,7 @@ cs.ApplyTo(dbContext);
 await dbContext.SaveChangesAsync();
 
 // Uniqueness validation against the database
-cs = cs.ValidateUnique("Email", dbContext);
+cs = cs.ValidateUnique(u => u.Email, dbContext);
 ```
 
 ### ASP.NET Core

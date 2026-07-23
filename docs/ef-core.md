@@ -19,7 +19,7 @@ cs.ApplyTo(dbContext);
 await dbContext.SaveChangesAsync();
 
 // Uniqueness validation against the database
-cs = cs.ValidateUnique("Email", dbContext);
+cs = cs.ValidateUnique(u => u.Email, dbContext);
 ```
 
 ## ASP.NET Core

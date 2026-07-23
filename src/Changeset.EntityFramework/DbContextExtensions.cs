@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Linq.Expressions;
 using System.Reflection;
 using Microsoft.EntityFrameworkCore;
 
@@ -103,6 +104,11 @@ public static class DbContextExtensions
         return changeset;
     }
 
+    public static Changeset<T> ValidateUnique<T, TValue>(
+        this Changeset<T> changeset, Expression<Func<T, TValue>> field,
+        DbContext context, string? message = null) where T : class =>
+        changeset.ValidateUnique(FieldName(field), context, message);
+
     /// <summary>
     /// Async version of ValidateUnique that uses EF Core's async query capabilities.
     /// Uses a compiled expression for efficient DB-side filtering.
@@ -133,5 +139,26 @@ public static class DbContextExtensions
             return changeset.AddError(field, message ?? "has already been taken", "uniqueness");
 
         return changeset;
+    }
+
+    public static Task<Changeset<T>> ValidateUniqueAsync<T, TValue>(
+        this Changeset<T> changeset, Expression<Func<T, TValue>> field,
+        DbContext context, string? message = null,
+        CancellationToken cancellationToken = default) where T : class =>
+        changeset.ValidateUniqueAsync(
+            FieldName(field), context, message, cancellationToken);
+
+    private static string FieldName<T, TValue>(Expression<Func<T, TValue>> field)
+    {
+        ArgumentNullException.ThrowIfNull(field);
+        Expression body = field.Body;
+        if (body is UnaryExpression { NodeType: ExpressionType.Convert } unary)
+            body = unary.Operand;
+        if (body is MemberExpression member && member.Expression == field.Parameters[0])
+            return member.Member.Name;
+
+        throw new ArgumentException(
+            "Expression must be a direct property access, e.g. u => u.Email",
+            nameof(field));
     }
 }

@@ -15,10 +15,10 @@ app.MapPost("/users", (JsonElement body) =>
         ?? new Dictionary<string, object?>();
 
     var cs = Changeset<User>.Cast(@params, ["Name", "Email", "Age"])
-        .ValidateRequired(["Name", "Email"])
-        .ValidateFormat("Email", @"^[^@]+@[^@]+\.[^@]+$")
-        .ValidateLength("Name", min: 2, max: 100)
-        .ValidateNumber("Age", greaterThanOrEqual: 0, lessThan: 150);
+        .ValidateRequired(u => new { u.Name, u.Email })
+        .ValidateFormat(u => u.Email, @"^[^@]+@[^@]+\.[^@]+$")
+        .ValidateLength(u => u.Name, min: 2, max: 100)
+        .ValidateNumber(u => u.Age, greaterThanOrEqual: 0, lessThan: 150);
 
     if (!cs.IsValid)
         return Results.ValidationProblem(
@@ -43,10 +43,10 @@ app.MapPut("/users/{id:int}", (int id, JsonElement body) =>
         ?? new Dictionary<string, object?>();
 
     var cs = Changeset<User>.Cast(existing, @params, ["Name", "Email", "Age"])
-        .ValidateRequired(["Name", "Email"])
-        .ValidateFormat("Email", @"^[^@]+@[^@]+\.[^@]+$")
-        .ValidateLength("Name", min: 2, max: 100)
-        .ValidateNumber("Age", greaterThanOrEqual: 0, lessThan: 150);
+        .ValidateRequired(u => new { u.Name, u.Email })
+        .ValidateFormat(u => u.Email, @"^[^@]+@[^@]+\.[^@]+$")
+        .ValidateLength(u => u.Name, min: 2, max: 100)
+        .ValidateNumber(u => u.Age, greaterThanOrEqual: 0, lessThan: 150);
 
     if (!cs.IsValid)
         return Results.ValidationProblem(

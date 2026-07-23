@@ -132,6 +132,82 @@ public class ValidatorTests
     }
 
     [Fact]
+    public void ValidateLength_PropertyExpression_TooShort_Fails()
+    {
+        var cs = Changeset<User>.Cast(
+            new Dictionary<string, object?> { ["Name"] = "A" }, ["Name"])
+            .ValidateLength(c => c.Name, min: 2, max: 100);
+
+        Assert.False(cs.IsValid);
+        Assert.Equal("length", cs.ErrorsOn("Name")[0].Code);
+    }
+
+    [Fact]
+    public void ValidateLength_PropertyExpression_WithinBounds_Passes()
+    {
+        var cs = Changeset<User>.Cast(
+            new Dictionary<string, object?> { ["Name"] = "Alice" }, ["Name"])
+            .ValidateLength(c => c.Name, min: 2, max: 100);
+
+        Assert.True(cs.IsValid);
+    }
+
+    [Fact]
+    public void PropertyExpressionOverloads_ValidateFields()
+    {
+        var @params = new Dictionary<string, object?>
+        {
+            ["Name"] = "admin",
+            ["Email"] = "invalid",
+            ["Email_confirmation"] = "different",
+            ["Age"] = 200,
+            ["Role"] = UserRole.Guest
+        };
+
+        var cs = Changeset<User>.Cast(
+                @params, u => new { u.Name, u.Email, u.Age, u.Role })
+            .ValidateRequired(u => new { u.Name, u.Email })
+            .ValidateFormat(u => u.Email, @"^[^@]+@[^@]+\.[^@]+$")
+            .ValidateNumber(u => u.Age, lessThan: 150)
+            .ValidateInclusion(u => u.Role, [UserRole.Member, UserRole.Admin])
+            .ValidateExclusion(u => u.Name, ["admin", "root"])
+            .ValidateConfirmation(u => u.Email)
+            .ValidateChange(u => u.Name, (changeset, _) =>
+                changeset.AddError("Name", "custom failure", "custom"));
+
+        Assert.Equal("format", cs.ErrorsOn("Email").Single().Code);
+        Assert.Equal("number", cs.ErrorsOn("Age").Single().Code);
+        Assert.Equal("inclusion", cs.ErrorsOn("Role").Single().Code);
+        Assert.Equal(["exclusion", "custom"],
+            cs.ErrorsOn("Name").Select(error => error.Code));
+        Assert.Equal("confirmation", cs.ErrorsOn("Email_confirmation").Single().Code);
+    }
+
+    [Fact]
+    public void ValidateRequired_PropertyExpression_MissingField_Fails()
+    {
+        var cs = Changeset<User>.Cast(
+                new Dictionary<string, object?>(), u => new { u.Name, u.Email })
+            .ValidateRequired(u => new { u.Name, u.Email });
+
+        Assert.Equal(2, cs.Errors.Length);
+        Assert.All(cs.Errors, error => Assert.Equal("required", error.Code));
+    }
+
+    [Fact]
+    public async Task ValidateChangeAsync_PropertyExpression_WorksAcrossTaskPipeline()
+    {
+        var cs = await Changeset<User>.Cast(
+                new Dictionary<string, object?> { ["Name"] = "Alice" }, ["Name"])
+            .ValidateChangeAsync(u => u.Name, (changeset, _) =>
+                Task.FromResult(changeset))
+            .ValidateChangeAsync(u => u.Name, (changeset, _) =>
+                Task.FromResult(changeset.AddError("Name", "async failure", "async")));
+
+        Assert.Equal("async", cs.ErrorsOn("Name").Single().Code);
+    }
+
+    [Fact]
     public void ValidateNumber_GreaterThanOrEqual_Passes()
     {
         var cs = Changeset<User>.Cast(
