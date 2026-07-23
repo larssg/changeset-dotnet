@@ -1,0 +1,39 @@
+# Changeset.NET
+
+> An immutable Ecto-style cast, validate, inspect, and apply pipeline for untrusted input in C# and .NET 10.
+
+Changeset.NET uses explicit field allowlists, type coercion, composable validation,
+structured errors, and an explicit materialization step. The core package does not
+mutate a model during casting or validation.
+
+Important semantics: most validators inspect only values in `Changes`;
+`ValidateRequired` also rejects absent values. Core `ApplyChanges` creates a new
+object for updates, while EF Core `ApplyTo` mutates the tracked entity.
+
+## Start here
+
+- [Getting Started](getting-started/): Install the package and build complete create and update pipelines.
+
+## Core concepts
+
+- [The Changeset Lifecycle](lifecycle/): Understand immutable state, insert/update semantics, and final outcomes.
+- [Casting](casting/): Allowlist fields, coerce input types, and configure casting behavior.
+- [Validation](validation/): Use built-in, custom, and asynchronous validators.
+- [Errors](errors/): Inspect structured errors and map them to application responses.
+- [Applying Changes](applying-changes/): Materialize valid inserts and updates and understand copy behavior.
+- [Associations](associations/): Cast and validate nested input, including current materialization limits.
+
+## Integrations
+
+- [EF Core & ASP.NET Core](ef-core/): Persist changes, validate uniqueness, and create HTTP responses.
+- [Source Generator](source-generator/): Use generated appliers and string-field diagnostics.
+
+## Reference
+
+- [Recipes](recipes/): Copy complete patterns for common application workflows.
+- [API Reference](api-reference/): Look up public types, members, overloads, and error codes.
+- [Troubleshooting](troubleshooting/): Diagnose behavior by observable symptom.
+
+## Complete context
+
+- [Full documentation corpus](llms-full.txt): All canonical guides combined in reading order for retrieval or prompt context.
