@@ -10,21 +10,21 @@ public static class ValidatorExtensions
     public static Changeset<T> ValidateRequired<T>(
         this Changeset<T> changeset, IReadOnlyList<string> fields) where T : class
     {
-        var cs = changeset;
+        ImmutableArray<ChangesetError>.Builder? errors = null;
         foreach (var field in fields)
         {
-            if (!cs.Changes.TryGetValue(field, out var value))
+            if (!changeset.Changes.TryGetValue(field, out var value) ||
+                value is null ||
+                (value is string str && string.IsNullOrWhiteSpace(str)))
             {
-                cs = cs.AddError(field, "can't be blank", "required");
-                continue;
-            }
-
-            if (value is null || (value is string str && string.IsNullOrWhiteSpace(str)))
-            {
-                cs = cs.AddError(field, "can't be blank", "required");
+                errors ??= changeset.Errors.ToBuilder();
+                errors.Add(ChangesetError.For(field, "can't be blank", "required"));
             }
         }
-        return cs;
+
+        return errors is null
+            ? changeset
+            : changeset with { Errors = errors.ToImmutable() };
     }
 
     public static Changeset<T> ValidateRequired<T>(
@@ -71,7 +71,7 @@ public static class ValidatorExtensions
         else if (value is ICollection col)
             length = col.Count;
         else if (value is IEnumerable enumerable)
-            length = enumerable.Cast<object>().Count();
+            length = CountUntil(enumerable, EnumerationLimit(min, max, @is));
         else
             return changeset;
 
@@ -276,10 +276,34 @@ public static class ValidatorExtensions
         return await changeset.ValidateChangeAsync(field, validator);
     }
 
-    private static string FieldName<T, TValue>(Expression<Func<T, TValue>> field)
+    private static string FieldName<T, TValue>(Expression<Func<T, TValue>> field) =>
+        ExpressionFieldExtractor.ExtractFieldName(field);
+
+    private static int? EnumerationLimit(int? min, int? max, int? @is)
     {
-        ArgumentNullException.ThrowIfNull(field);
-        return ExpressionFieldExtractor.ExtractFieldNames(field).Single();
+        if (@is is < int.MaxValue)
+            return Math.Max(0, @is.Value + 1);
+
+        if (max is < int.MaxValue)
+            return Math.Max(Math.Max(0, max.Value + 1), min.GetValueOrDefault());
+
+        return null;
+    }
+
+    private static int CountUntil(IEnumerable enumerable, int? limit)
+    {
+        var count = 0;
+        if (limit == 0)
+            return count;
+
+        foreach (var _ in enumerable)
+        {
+            count++;
+            if (count == limit)
+                break;
+        }
+
+        return count;
     }
 
     private static ImmutableDictionary<string, object> BuildLengthMetadata(
