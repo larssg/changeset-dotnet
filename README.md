@@ -65,6 +65,7 @@ guides for:
 - [built-in and custom validation](docs/validation.md)
 - [errors and API responses](docs/errors.md)
 - [applying changes](docs/applying-changes.md)
+- [nested associations](docs/associations.md)
 - [EF Core and ASP.NET Core](docs/ef-core.md)
 - [the source generator and analyzer](docs/source-generator.md)
 
