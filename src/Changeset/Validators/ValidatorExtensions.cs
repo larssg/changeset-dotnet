@@ -169,8 +169,16 @@ public static class ValidatorExtensions
 
     public static Changeset<T> ValidateInclusion<T, TValue>(
         this Changeset<T> changeset, Expression<Func<T, TValue>> field,
-        IReadOnlyList<object> values, string? message = null) where T : class =>
-        changeset.ValidateInclusion(FieldName(field), values, message);
+        IReadOnlyCollection<TValue> values, string? message = null) where T : class
+    {
+        var fieldName = FieldName(field);
+        if (!changeset.Changes.TryGetValue(fieldName, out var value))
+            return changeset;
+
+        return CollectionContains(values, value)
+            ? changeset
+            : changeset.AddError(fieldName, message ?? "is invalid", "inclusion");
+    }
 
     public static Changeset<T> ValidateExclusion<T>(
         this Changeset<T> changeset, string field, IReadOnlyList<object> values,
@@ -187,8 +195,16 @@ public static class ValidatorExtensions
 
     public static Changeset<T> ValidateExclusion<T, TValue>(
         this Changeset<T> changeset, Expression<Func<T, TValue>> field,
-        IReadOnlyList<object> values, string? message = null) where T : class =>
-        changeset.ValidateExclusion(FieldName(field), values, message);
+        IReadOnlyCollection<TValue> values, string? message = null) where T : class
+    {
+        var fieldName = FieldName(field);
+        if (!changeset.Changes.TryGetValue(fieldName, out var value))
+            return changeset;
+
+        return CollectionContains(values, value)
+            ? changeset.AddError(fieldName, message ?? "is reserved", "exclusion")
+            : changeset;
+    }
 
     public static Changeset<T> ValidateConfirmation<T>(
         this Changeset<T> changeset, string field,
@@ -304,6 +320,36 @@ public static class ValidatorExtensions
         }
 
         return count;
+    }
+
+    private static bool CollectionContains<TValue>(
+        IReadOnlyCollection<TValue> values, object? value)
+    {
+        if (value is TValue typedValue)
+        {
+            if (values is IReadOnlySet<TValue> set)
+                return set.Contains(typedValue);
+
+            var comparer = EqualityComparer<TValue>.Default;
+            foreach (var candidate in values)
+            {
+                if (comparer.Equals(candidate, typedValue))
+                    return true;
+            }
+
+            return false;
+        }
+
+        if (value is not null)
+            return false;
+
+        foreach (var candidate in values)
+        {
+            if (candidate is null)
+                return true;
+        }
+
+        return false;
     }
 
     private static ImmutableDictionary<string, object> BuildLengthMetadata(

@@ -278,6 +278,29 @@ public class ValidatorTests
     }
 
     [Fact]
+    public void ValidateInclusion_PropertyExpression_UsesSetLookup()
+    {
+        var allowed = new TrackingReadOnlySet<UserRole>(UserRole.Admin);
+
+        var cs = Changeset<User>.Cast(
+                new Dictionary<string, object?> { ["Role"] = UserRole.Admin }, ["Role"])
+            .ValidateInclusion(user => user.Role, allowed);
+
+        Assert.True(cs.IsValid);
+        Assert.Equal(1, allowed.ContainsCalls);
+    }
+
+    [Fact]
+    public void ValidateInclusion_PropertyExpression_AllowsNullMember()
+    {
+        var cs = Changeset<User>.Cast(
+                new Dictionary<string, object?> { ["BirthDate"] = null }, ["BirthDate"])
+            .ValidateInclusion(user => user.BirthDate, [null]);
+
+        Assert.True(cs.IsValid);
+    }
+
+    [Fact]
     public void ValidateExclusion_Excluded_Fails()
     {
         var cs = Changeset<User>.Cast(
@@ -296,6 +319,20 @@ public class ValidatorTests
             .ValidateExclusion("Name", ["admin", "root"]);
 
         Assert.True(cs.IsValid);
+    }
+
+    [Fact]
+    public void ValidateExclusion_PropertyExpression_UsesSetLookup()
+    {
+        var excluded = new TrackingReadOnlySet<UserRole>(UserRole.Admin);
+
+        var cs = Changeset<User>.Cast(
+                new Dictionary<string, object?> { ["Role"] = UserRole.Admin }, ["Role"])
+            .ValidateExclusion(user => user.Role, excluded);
+
+        Assert.False(cs.IsValid);
+        Assert.Equal(1, excluded.ContainsCalls);
+        Assert.Equal("exclusion", cs.ErrorsOn("Role").Single().Code);
     }
 
     [Fact]
@@ -562,5 +599,30 @@ public class ValidatorTests
 
         System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() =>
             GetEnumerator();
+    }
+
+    private sealed class TrackingReadOnlySet<T>(T value) : IReadOnlySet<T>
+    {
+        public int ContainsCalls { get; private set; }
+        public int Count => 1;
+
+        public bool Contains(T item)
+        {
+            ContainsCalls++;
+            return EqualityComparer<T>.Default.Equals(value, item);
+        }
+
+        public IEnumerator<T> GetEnumerator() =>
+            throw new InvalidOperationException("Set lookup should not enumerate.");
+
+        System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() =>
+            GetEnumerator();
+
+        public bool IsProperSubsetOf(IEnumerable<T> other) => throw new NotSupportedException();
+        public bool IsProperSupersetOf(IEnumerable<T> other) => throw new NotSupportedException();
+        public bool IsSubsetOf(IEnumerable<T> other) => throw new NotSupportedException();
+        public bool IsSupersetOf(IEnumerable<T> other) => throw new NotSupportedException();
+        public bool Overlaps(IEnumerable<T> other) => throw new NotSupportedException();
+        public bool SetEquals(IEnumerable<T> other) => throw new NotSupportedException();
     }
 }
