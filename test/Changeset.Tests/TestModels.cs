@@ -45,6 +45,11 @@ public class Order
     public Address? Address { get; set; }
 }
 
+public class SequenceModel
+{
+    public IEnumerable<int> Items { get; set; } = [];
+}
+
 public class NoDefaultConstructor
 {
     public NoDefaultConstructor(string name)

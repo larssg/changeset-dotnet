@@ -15,11 +15,22 @@ internal static class ExpressionFieldExtractor
         Expression<Func<T, TValue>> expression)
         => ExtractFieldNames(expression.Body);
 
+    public static string ExtractFieldName<T, TValue>(
+        Expression<Func<T, TValue>> expression)
+    {
+        ArgumentNullException.ThrowIfNull(expression);
+        var body = UnwrapConversion(expression.Body);
+        if (body is MemberExpression member)
+            return member.Member.Name;
+
+        throw new ArgumentException(
+            "Expression must be a property access (u => u.Name)",
+            nameof(expression));
+    }
+
     private static IReadOnlyList<string> ExtractFieldNames(Expression body)
     {
-        // Handle implicit boxing conversion: u => (object)u.Name
-        if (body is UnaryExpression { NodeType: ExpressionType.Convert } unary)
-            body = unary.Operand;
+        body = UnwrapConversion(body);
 
         // Single property: u => u.Name
         if (body is MemberExpression member)
@@ -41,4 +52,9 @@ internal static class ExpressionFieldExtractor
         throw new ArgumentException(
             "Expression must be a property access (u => u.Name) or anonymous type (u => new { u.Name, u.Email })");
     }
+
+    private static Expression UnwrapConversion(Expression body) =>
+        body is UnaryExpression { NodeType: ExpressionType.Convert } unary
+            ? unary.Operand
+            : body;
 }

@@ -153,6 +153,34 @@ public class ValidatorTests
     }
 
     [Fact]
+    public void ValidateLength_EnumerableWithMax_StopsAfterFirstInvalidItem()
+    {
+        var items = new CountingEnumerable(100);
+
+        var cs = Changeset<SequenceModel>.Cast(
+                new Dictionary<string, object?> { ["Items"] = items }, ["Items"])
+            .ValidateLength(model => model.Items, max: 5);
+
+        Assert.False(cs.IsValid);
+        Assert.Equal(6, items.EnumeratedCount);
+        Assert.Equal("length", cs.ErrorsOn("Items").Single().Code);
+    }
+
+    [Fact]
+    public void ValidateLength_EnumerablePreservesMinBeforeMaxErrorOrder()
+    {
+        var items = new CountingEnumerable(100);
+
+        var cs = Changeset<SequenceModel>.Cast(
+                new Dictionary<string, object?> { ["Items"] = items }, ["Items"])
+            .ValidateLength(model => model.Items, min: 10, max: 5);
+
+        Assert.False(cs.IsValid);
+        Assert.Equal(10, items.EnumeratedCount);
+        Assert.Contains("at most 5", cs.ErrorsOn("Items").Single().Message);
+    }
+
+    [Fact]
     public void PropertyExpressionOverloads_ValidateFields()
     {
         var @params = new Dictionary<string, object?>
@@ -517,5 +545,22 @@ public class ValidatorTests
             .ValidateAsync(c => c.ValidateFormat("Email", @"^[^@]+@[^@]+\.[^@]+$"));
 
         Assert.True(cs.IsValid);
+    }
+
+    private sealed class CountingEnumerable(int count) : IEnumerable<int>
+    {
+        public int EnumeratedCount { get; private set; }
+
+        public IEnumerator<int> GetEnumerator()
+        {
+            for (var value = 0; value < count; value++)
+            {
+                EnumeratedCount++;
+                yield return value;
+            }
+        }
+
+        System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() =>
+            GetEnumerator();
     }
 }
