@@ -50,6 +50,18 @@ var cs = Changeset<User>.Cast(params, ["Name"])
     .ValidateLength("Name", min: 2, max: 100);
 ```
 
+Typed inclusion and exclusion validators accept collections matching the selected
+property type. For frequently reused or larger value sets, pass a set to get
+constant-time membership checks:
+
+```csharp
+IReadOnlySet<UserRole> allowedRoles =
+    new HashSet<UserRole> { UserRole.Member, UserRole.Admin };
+
+var cs = Changeset<User>.Cast(params, u => new { u.Role })
+    .ValidateInclusion(u => u.Role, allowedRoles);
+```
+
 ## Async validators
 
 Use async validators for I/O-bound checks:
