@@ -43,3 +43,6 @@ nav:
   - Integrations:
       - EF Core & ASP.NET Core: ef-core.md
       - Source Generator: source-generator.md
+  - Recipes: recipes.md
+  - API Reference: api-reference.md
+  - Troubleshooting: troubleshooting.md

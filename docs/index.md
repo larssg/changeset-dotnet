@@ -60,3 +60,6 @@ The core and EF Core packages target .NET 10.
   two possible outcomes.
 - Continue to [EF Core & ASP.NET Core](ef-core.md) or the
   [Source Generator](source-generator.md) when you need integrations.
+- Copy a complete workflow from [Recipes](recipes.md).
+- Look up signatures in the [API Reference](api-reference.md) or start from a
+  symptom in [Troubleshooting](troubleshooting.md).

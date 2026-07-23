@@ -68,6 +68,9 @@ guides for:
 - [nested associations](docs/associations.md)
 - [EF Core and ASP.NET Core](docs/ef-core.md)
 - [the source generator and analyzer](docs/source-generator.md)
+- [common recipes](docs/recipes.md)
+- [the public API reference](docs/api-reference.md)
+- [troubleshooting](docs/troubleshooting.md)
 
 The documentation site is built with MkDocs:
 
