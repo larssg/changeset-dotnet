@@ -80,7 +80,20 @@ python3 -m venv .venv
 .venv/bin/mkdocs serve
 ```
 
-Run `.venv/bin/mkdocs build --strict` before submitting documentation changes.
+The canonical Markdown guides also generate two LLM-oriented resources:
+
+- `docs/llms.txt` is a compact index with descriptions and reading order.
+- `docs/llms-full.txt` combines the complete documentation into one context
+  file.
+
+After changing a guide, regenerate them with:
+
+```shell
+python3 tools/generate-llm-docs.py
+```
+
+Run `python3 tools/generate-llm-docs.py --check` and
+`.venv/bin/mkdocs build --strict` before submitting documentation changes.
 
 ## Development
 
