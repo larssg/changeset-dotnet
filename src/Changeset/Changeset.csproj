@@ -1,9 +1,11 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net10.0</TargetFramework>
+    <TargetFrameworks>net8.0;net10.0</TargetFrameworks>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <Description>Ecto-style cast, validate, and apply pipeline for C#. Turns untrusted, untyped input into an immutable description of proposed changes — casting with an allowlist, composable validators, nested changesets, and explicit application.</Description>
+    <PackageTags>changeset;validation;casting;input-validation;forms;ecto</PackageTags>
   </PropertyGroup>
 
 </Project>

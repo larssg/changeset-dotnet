@@ -5,8 +5,20 @@ using System.Text.RegularExpressions;
 
 namespace Changeset.Validators;
 
+/// <summary>
+/// Validation extension methods for <see cref="Changeset{T}"/>. Validators inspect
+/// the changeset's Changes and accumulate errors without mutating the original
+/// changeset; each returns a new changeset instance. Except for
+/// <see cref="ValidateRequired{T}(Changeset{T}, IReadOnlyList{string})"/>, validators
+/// skip fields that have no change, so they only run on values that were actually cast.
+/// </summary>
 public static class ValidatorExtensions
 {
+    /// <summary>
+    /// Validates that each of the given fields has a change that is not null and,
+    /// for strings, not empty or whitespace. Adds a "can't be blank" error with
+    /// validation kind "required" for each missing field.
+    /// </summary>
     public static Changeset<T> ValidateRequired<T>(
         this Changeset<T> changeset, IReadOnlyList<string> fields) where T : class
     {
@@ -27,6 +39,12 @@ public static class ValidatorExtensions
             : changeset with { Errors = errors.ToImmutable() };
     }
 
+    /// <summary>
+    /// Validates that the fields selected with a compile-time safe expression are present.
+    /// Select a single property (<c>c => c.Name</c>) or several via an anonymous type
+    /// (<c>c => new { c.Name, c.Email }</c>).
+    /// </summary>
+    /// <exception cref="ArgumentNullException"><paramref name="fields"/> is null.</exception>
     public static Changeset<T> ValidateRequired<T>(
         this Changeset<T> changeset,
         Expression<Func<T, object>> fields) where T : class
@@ -35,6 +53,15 @@ public static class ValidatorExtensions
         return changeset.ValidateRequired(ExpressionFieldExtractor.ExtractFieldNames(fields));
     }
 
+    /// <summary>
+    /// Validates that a changed string field matches a regular expression pattern.
+    /// Skipped when the field has no change or the change is not a string.
+    /// Adds a "has invalid format" error with validation kind "format" on mismatch.
+    /// </summary>
+    /// <param name="changeset">The changeset to validate.</param>
+    /// <param name="field">The name of the field to validate.</param>
+    /// <param name="pattern">The regular expression pattern the value must match.</param>
+    /// <param name="message">Custom error message; defaults to "has invalid format".</param>
     public static Changeset<T> ValidateFormat<T>(
         this Changeset<T> changeset, string field, string pattern,
         string? message = null) where T : class
@@ -52,6 +79,15 @@ public static class ValidatorExtensions
         return changeset;
     }
 
+    /// <summary>
+    /// Validates that a changed string field matches a precompiled <see cref="Regex"/>.
+    /// Skipped when the field has no change or the change is not a string.
+    /// Adds a "has invalid format" error with validation kind "format" on mismatch.
+    /// </summary>
+    /// <param name="changeset">The changeset to validate.</param>
+    /// <param name="field">The name of the field to validate.</param>
+    /// <param name="regex">The regular expression the value must match.</param>
+    /// <param name="message">Custom error message; defaults to "has invalid format".</param>
     public static Changeset<T> ValidateFormat<T>(
         this Changeset<T> changeset, string field, Regex regex,
         string? message = null) where T : class
@@ -69,16 +105,36 @@ public static class ValidatorExtensions
         return changeset;
     }
 
+    /// <summary>
+    /// Validates that a changed string field, selected with a compile-time safe
+    /// expression, matches a regular expression pattern.
+    /// </summary>
     public static Changeset<T> ValidateFormat<T, TValue>(
         this Changeset<T> changeset, Expression<Func<T, TValue>> field,
         string pattern, string? message = null) where T : class =>
         changeset.ValidateFormat(FieldName(field), pattern, message);
 
+    /// <summary>
+    /// Validates that a changed string field, selected with a compile-time safe
+    /// expression, matches a precompiled <see cref="Regex"/>.
+    /// </summary>
     public static Changeset<T> ValidateFormat<T, TValue>(
         this Changeset<T> changeset, Expression<Func<T, TValue>> field,
         Regex regex, string? message = null) where T : class =>
         changeset.ValidateFormat(FieldName(field), regex, message);
 
+    /// <summary>
+    /// Validates the length of a changed field. Works on strings (character count),
+    /// collections (element count), and other enumerables. Skipped when the field
+    /// has no change or the change has no measurable length. Adds an error with
+    /// validation kind "length" when a constraint is violated.
+    /// </summary>
+    /// <param name="changeset">The changeset to validate.</param>
+    /// <param name="field">The name of the field to validate.</param>
+    /// <param name="min">The minimum allowed length, inclusive.</param>
+    /// <param name="max">The maximum allowed length, inclusive.</param>
+    /// <param name="is">The exact length required; checked before min and max.</param>
+    /// <param name="message">Custom error message; defaults to a constraint-specific message.</param>
     public static Changeset<T> ValidateLength<T>(
         this Changeset<T> changeset, string field,
         int? min = null, int? max = null, int? @is = null,
@@ -130,6 +186,21 @@ public static class ValidatorExtensions
         string? message = null) where T : class =>
         changeset.ValidateLength(FieldName(field), min, max, @is, message);
 
+    /// <summary>
+    /// Validates a changed numeric (or otherwise comparable) field against comparison
+    /// constraints. Skipped when the field has no change or the change is not
+    /// <see cref="IComparable"/>. Checks run in the order greaterThan,
+    /// greaterThanOrEqual, lessThan, lessThanOrEqual, equalTo and stop at the first
+    /// violation, adding an error with validation kind "number".
+    /// </summary>
+    /// <param name="changeset">The changeset to validate.</param>
+    /// <param name="field">The name of the field to validate.</param>
+    /// <param name="greaterThan">The value the change must be strictly greater than.</param>
+    /// <param name="greaterThanOrEqual">The value the change must be greater than or equal to.</param>
+    /// <param name="lessThan">The value the change must be strictly less than.</param>
+    /// <param name="lessThanOrEqual">The value the change must be less than or equal to.</param>
+    /// <param name="equalTo">The value the change must compare equal to.</param>
+    /// <param name="message">Custom error message; defaults to a constraint-specific message.</param>
     public static Changeset<T> ValidateNumber<T>(
         this Changeset<T> changeset, string field,
         IComparable? greaterThan = null,
@@ -165,6 +236,10 @@ public static class ValidatorExtensions
         return changeset;
     }
 
+    /// <summary>
+    /// Validates a changed comparable field, selected with a compile-time safe
+    /// expression, against comparison constraints.
+    /// </summary>
     public static Changeset<T> ValidateNumber<T, TValue>(
         this Changeset<T> changeset, Expression<Func<T, TValue>> field,
         IComparable? greaterThan = null,
@@ -176,6 +251,15 @@ public static class ValidatorExtensions
         changeset.ValidateNumber(FieldName(field), greaterThan, greaterThanOrEqual,
             lessThan, lessThanOrEqual, equalTo, message);
 
+    /// <summary>
+    /// Validates that a changed field's value is one of the allowed values.
+    /// Skipped when the field has no change. Adds an "is invalid" error with
+    /// validation kind "inclusion" when the value is not in the list.
+    /// </summary>
+    /// <param name="changeset">The changeset to validate.</param>
+    /// <param name="field">The name of the field to validate.</param>
+    /// <param name="values">The set of allowed values.</param>
+    /// <param name="message">Custom error message; defaults to "is invalid".</param>
     public static Changeset<T> ValidateInclusion<T>(
         this Changeset<T> changeset, string field, IReadOnlyList<object> values,
         string? message = null) where T : class
@@ -189,6 +273,10 @@ public static class ValidatorExtensions
         return changeset;
     }
 
+    /// <summary>
+    /// Validates that a changed field, selected with a compile-time safe expression,
+    /// has a value contained in the typed collection of allowed values.
+    /// </summary>
     public static Changeset<T> ValidateInclusion<T, TValue>(
         this Changeset<T> changeset, Expression<Func<T, TValue>> field,
         IReadOnlyCollection<TValue> values, string? message = null) where T : class
@@ -202,6 +290,15 @@ public static class ValidatorExtensions
             : changeset.AddError(fieldName, message ?? "is invalid", "inclusion");
     }
 
+    /// <summary>
+    /// Validates that a changed field's value is not one of the reserved values.
+    /// Skipped when the field has no change. Adds an "is reserved" error with
+    /// validation kind "exclusion" when the value is in the list.
+    /// </summary>
+    /// <param name="changeset">The changeset to validate.</param>
+    /// <param name="field">The name of the field to validate.</param>
+    /// <param name="values">The set of disallowed values.</param>
+    /// <param name="message">Custom error message; defaults to "is reserved".</param>
     public static Changeset<T> ValidateExclusion<T>(
         this Changeset<T> changeset, string field, IReadOnlyList<object> values,
         string? message = null) where T : class
@@ -215,6 +312,10 @@ public static class ValidatorExtensions
         return changeset;
     }
 
+    /// <summary>
+    /// Validates that a changed field, selected with a compile-time safe expression,
+    /// has a value not contained in the typed collection of reserved values.
+    /// </summary>
     public static Changeset<T> ValidateExclusion<T, TValue>(
         this Changeset<T> changeset, Expression<Func<T, TValue>> field,
         IReadOnlyCollection<TValue> values, string? message = null) where T : class
@@ -228,6 +329,15 @@ public static class ValidatorExtensions
             : changeset;
     }
 
+    /// <summary>
+    /// Validates that a changed field matches its confirmation parameter — the raw
+    /// param named <c>{field}_confirmation</c> (e.g. <c>password_confirmation</c>).
+    /// Skipped when the field has no change. On mismatch, adds a "does not match"
+    /// error with validation kind "confirmation" on the confirmation field.
+    /// </summary>
+    /// <param name="changeset">The changeset to validate.</param>
+    /// <param name="field">The name of the field to validate.</param>
+    /// <param name="message">Custom error message; defaults to "does not match".</param>
     public static Changeset<T> ValidateConfirmation<T>(
         this Changeset<T> changeset, string field,
         string? message = null) where T : class
@@ -245,11 +355,23 @@ public static class ValidatorExtensions
         return changeset;
     }
 
+    /// <summary>
+    /// Validates that a changed field, selected with a compile-time safe expression,
+    /// matches its <c>{field}_confirmation</c> parameter.
+    /// </summary>
     public static Changeset<T> ValidateConfirmation<T, TValue>(
         this Changeset<T> changeset, Expression<Func<T, TValue>> field,
         string? message = null) where T : class =>
         changeset.ValidateConfirmation(FieldName(field), message);
 
+    /// <summary>
+    /// Runs a custom validator against a single changed field. Skipped when the field
+    /// has no change. The validator receives the changeset and the changed value, and
+    /// returns the changeset with any errors added.
+    /// </summary>
+    /// <param name="changeset">The changeset to validate.</param>
+    /// <param name="field">The name of the field to validate.</param>
+    /// <param name="validator">Function receiving the changeset and the changed value.</param>
     public static Changeset<T> ValidateChange<T>(
         this Changeset<T> changeset, string field,
         Func<Changeset<T>, object?, Changeset<T>> validator) where T : class
@@ -260,11 +382,22 @@ public static class ValidatorExtensions
         return validator(changeset, value);
     }
 
+    /// <summary>
+    /// Runs a custom validator against a single changed field selected with a
+    /// compile-time safe expression.
+    /// </summary>
     public static Changeset<T> ValidateChange<T, TValue>(
         this Changeset<T> changeset, Expression<Func<T, TValue>> field,
         Func<Changeset<T>, object?, Changeset<T>> validator) where T : class =>
         changeset.ValidateChange(FieldName(field), validator);
 
+    /// <summary>
+    /// Runs a custom validator against the whole changeset. Unlike
+    /// <see cref="ValidateChange{T}(Changeset{T}, string, Func{Changeset{T}, object?, Changeset{T}})"/>,
+    /// it always runs, making it suitable for cross-field rules.
+    /// </summary>
+    /// <param name="changeset">The changeset to validate.</param>
+    /// <param name="validator">Function receiving the changeset and returning it with any errors added.</param>
     public static Changeset<T> Validate<T>(
         this Changeset<T> changeset,
         Func<Changeset<T>, Changeset<T>> validator) where T : class
@@ -272,6 +405,13 @@ public static class ValidatorExtensions
         return validator(changeset);
     }
 
+    /// <summary>
+    /// Runs an asynchronous custom validator against a single changed field — for
+    /// example a database uniqueness check. Skipped when the field has no change.
+    /// </summary>
+    /// <param name="changeset">The changeset to validate.</param>
+    /// <param name="field">The name of the field to validate.</param>
+    /// <param name="validator">Async function receiving the changeset and the changed value.</param>
     public static async Task<Changeset<T>> ValidateChangeAsync<T>(
         this Changeset<T> changeset, string field,
         Func<Changeset<T>, object?, Task<Changeset<T>>> validator) where T : class
@@ -282,11 +422,19 @@ public static class ValidatorExtensions
         return await validator(changeset, value);
     }
 
+    /// <summary>
+    /// Runs an asynchronous custom validator against a single changed field selected
+    /// with a compile-time safe expression.
+    /// </summary>
     public static Task<Changeset<T>> ValidateChangeAsync<T, TValue>(
         this Changeset<T> changeset, Expression<Func<T, TValue>> field,
         Func<Changeset<T>, object?, Task<Changeset<T>>> validator) where T : class =>
         changeset.ValidateChangeAsync(FieldName(field), validator);
 
+    /// <summary>
+    /// Awaits a pending changeset and runs a synchronous validator on the result,
+    /// allowing further validators to be chained after an async step.
+    /// </summary>
     public static async Task<Changeset<T>> ValidateAsync<T>(
         this Task<Changeset<T>> changesetTask,
         Func<Changeset<T>, Changeset<T>> validator) where T : class
@@ -295,6 +443,10 @@ public static class ValidatorExtensions
         return validator(changeset);
     }
 
+    /// <summary>
+    /// Awaits a pending changeset and runs an asynchronous custom validator against
+    /// a single changed field. Skipped when the field has no change.
+    /// </summary>
     public static async Task<Changeset<T>> ValidateChangeAsync<T>(
         this Task<Changeset<T>> changesetTask, string field,
         Func<Changeset<T>, object?, Task<Changeset<T>>> validator) where T : class
@@ -306,6 +458,10 @@ public static class ValidatorExtensions
         return await validator(changeset, value);
     }
 
+    /// <summary>
+    /// Awaits a pending changeset and runs an asynchronous custom validator against
+    /// a single changed field selected with a compile-time safe expression.
+    /// </summary>
     public static async Task<Changeset<T>> ValidateChangeAsync<T, TValue>(
         this Task<Changeset<T>> changesetTask, Expression<Func<T, TValue>> field,
         Func<Changeset<T>, object?, Task<Changeset<T>>> validator) where T : class

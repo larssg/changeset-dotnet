@@ -8,6 +8,13 @@ using Microsoft.CodeAnalysis.Text;
 
 namespace Changeset.Generators;
 
+/// <summary>
+/// Incremental source generator that emits a changeset applier for each class or record
+/// decorated with <c>[ChangesetTarget]</c>. The generated applier creates and copies
+/// instances, applies changes by field name, and is registered with the changeset applier
+/// registry via a module initializer. Unsupported targets or properties are reported as
+/// <c>CHANGESETGEN001</c> and <c>CHANGESETGEN002</c> diagnostics instead of generating code.
+/// </summary>
 [Generator]
 public class ChangesetGenerator : IIncrementalGenerator
 {
@@ -29,6 +36,11 @@ public class ChangesetGenerator : IIncrementalGenerator
         DiagnosticSeverity.Error,
         isEnabledByDefault: true);
 
+    /// <summary>
+    /// Registers the incremental pipeline: finds types decorated with
+    /// <c>[ChangesetTarget]</c>, reports diagnostics for unsupported targets, and adds a
+    /// generated <c>ChangesetApplier</c> source file for each valid target.
+    /// </summary>
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
         // Find all classes and records decorated with [ChangesetTarget]

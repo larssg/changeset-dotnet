@@ -3,6 +3,9 @@ using Changeset.Casting;
 
 namespace Changeset;
 
+/// <summary>
+/// Extension methods for casting and validating nested associations on a changeset.
+/// </summary>
 public static class AssocExtensions
 {
     /// <summary>

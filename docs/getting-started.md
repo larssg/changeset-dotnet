@@ -5,7 +5,7 @@ It uses only the core `Changeset` package.
 
 ## Requirements and installation
 
-Create a .NET 10 project and add the package:
+Create a .NET 8 (or later) project and add the package:
 
 ```shell
 dotnet add package Changeset

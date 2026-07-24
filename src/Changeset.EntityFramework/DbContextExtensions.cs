@@ -7,6 +7,10 @@ using Microsoft.EntityFrameworkCore.Metadata;
 
 namespace Changeset.EntityFramework;
 
+/// <summary>
+/// Extension methods for applying changesets to an EF Core <see cref="DbContext"/> and for
+/// database-backed uniqueness validation.
+/// </summary>
 public static class DbContextExtensions
 {
     private static readonly ConcurrentDictionary<Type, Dictionary<string, PropertyInfo>> WritablePropertyMapCache = new();

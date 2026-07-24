@@ -39,7 +39,7 @@ explicit final step and is only allowed for a valid changeset.
 | `Changeset.EntityFramework` | EF Core persistence, uniqueness checks, and ASP.NET Core responses |
 | `Changeset.Generators` | Reflection-free property application and string-field diagnostics |
 
-The core and EF Core packages target .NET 10. The generator targets
+The core and EF Core packages target .NET 8 and .NET 10. The generator targets
 `netstandard2.0` so it can run as a Roslyn analyzer.
 
 ## Install

@@ -4,6 +4,10 @@ using Microsoft.AspNetCore.Mvc.ModelBinding;
 
 namespace Changeset.EntityFramework;
 
+/// <summary>
+/// Extension methods for surfacing changeset errors in ASP.NET Core, converting them to
+/// validation problem details for minimal APIs or model state for MVC controllers.
+/// </summary>
 public static class AspNetCoreExtensions
 {
     /// <summary>

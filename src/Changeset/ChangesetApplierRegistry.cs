@@ -11,11 +11,17 @@ public static class ChangesetApplierRegistry
 {
     private static readonly ConcurrentDictionary<Type, object> Appliers = new();
 
+    /// <summary>
+    /// Registers an applier for <typeparamref name="T"/>, replacing any existing registration.
+    /// </summary>
     public static void Register<T>(IChangesetApplier<T> applier) where T : class
     {
         Appliers[typeof(T)] = applier;
     }
 
+    /// <summary>
+    /// Returns the registered applier for <typeparamref name="T"/>, or <c>null</c> if none exists.
+    /// </summary>
     public static IChangesetApplier<T>? Get<T>() where T : class
     {
         return Appliers.TryGetValue(typeof(T), out var applier)
