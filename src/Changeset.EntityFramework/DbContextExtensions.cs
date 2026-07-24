@@ -56,6 +56,12 @@ public static class DbContextExtensions
         {
             if (propMap.TryGetValue(field, out var prop))
             {
+                if (value is IChangesetValue association)
+                {
+                    prop.SetValue(existing, ApplyAssociation(association, context));
+                    continue;
+                }
+
                 prop.SetValue(existing, value);
                 entry.Property(field).IsModified = true;
             }
@@ -63,6 +69,27 @@ public static class DbContextExtensions
 
         return existing;
     }
+
+    private static object ApplyAssociation(IChangesetValue changeset, DbContext context)
+    {
+        var method = typeof(DbContextExtensions)
+            .GetMethod(nameof(ApplyAssociationTyped),
+                BindingFlags.NonPublic | BindingFlags.Static)!
+            .MakeGenericMethod(changeset.ModelType);
+
+        try
+        {
+            return method.Invoke(null, [changeset, context])!;
+        }
+        catch (TargetInvocationException exception) when (exception.InnerException is not null)
+        {
+            throw exception.InnerException;
+        }
+    }
+
+    private static TAssoc ApplyAssociationTyped<TAssoc>(
+        IChangesetValue changeset, DbContext context) where TAssoc : class, new() =>
+        ((Changeset<TAssoc>)changeset).ApplyTo(context);
 
     /// <summary>
     /// Applies a valid changeset and calls SaveChangesAsync.

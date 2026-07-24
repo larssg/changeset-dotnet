@@ -265,8 +265,8 @@ Changeset<T> ValidateAssoc<T, TAssoc>(
 Changeset<TAssoc>? GetAssoc<T, TAssoc>(string field);
 ```
 
-Both types must be classes. See [Associations](associations.md), including the
-current recursive-materialization limitation.
+Both types must be classes. See [Associations](associations.md) for recursive
+materialization behavior.
 
 ## Applying
 

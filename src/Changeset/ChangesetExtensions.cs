@@ -40,18 +40,19 @@ public static class ChangesetExtensions
 
         // Use generated applier if available (no reflection)
         var applier = ChangesetApplierRegistry.Get<T>();
+        var materializedChanges = AssociationMaterializer.MaterializeChanges(changeset.Changes);
         if (applier is not null)
         {
             return changeset.Data is not null
-                ? applier.Apply(changeset.Data, changeset.Changes)
-                : applier.Create(changeset.Changes);
+                ? applier.Apply(changeset.Data, materializedChanges)
+                : applier.Create(materializedChanges);
         }
 
         var target = changeset.Data is not null
             ? ShallowClone(changeset.Data)
             : new T();
 
-        ApplyChangesToTarget(target, changeset.Changes);
+        ApplyChangesToTarget(target, materializedChanges);
         return target;
     }
 
@@ -68,7 +69,8 @@ public static class ChangesetExtensions
             ? ShallowClone(changeset.Data)
             : factory();
 
-        ApplyChangesToTarget(target, changeset.Changes);
+        ApplyChangesToTarget(target,
+            AssociationMaterializer.MaterializeChanges(changeset.Changes));
         return target;
     }
 

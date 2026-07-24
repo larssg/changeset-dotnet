@@ -203,6 +203,64 @@ public class DbContextExtensionsTests : IDisposable
     }
 
     [Fact]
+    public void ApplyTo_Insert_MaterializesAndTracksAssociation()
+    {
+        var cs = Changeset<TestUserWithAddress>.Cast(
+                new Dictionary<string, object?>
+                {
+                    ["Name"] = "Alice",
+                    ["Address"] = new Dictionary<string, object?>
+                    {
+                        ["Street"] = "123 Main",
+                        ["City"] = "Springfield"
+                    }
+                },
+                ["Name"])
+            .CastAssoc<TestUserWithAddress, TestAddress>(
+                "Address", ["Street", "City"]);
+
+        var user = cs.ApplyTo(_db);
+
+        Assert.NotNull(user.Address);
+        Assert.Equal("123 Main", user.Address.Street);
+        Assert.Equal(EntityState.Added, _db.Entry(user).State);
+        Assert.Equal(EntityState.Added, _db.Entry(user.Address).State);
+    }
+
+    [Fact]
+    public void ApplyTo_Update_AppliesAssociationChangesToTrackedEntity()
+    {
+        var address = new TestAddress { Id = 1, Street = "Old", City = "Keep" };
+        var user = new TestUserWithAddress
+        {
+            Id = 1, Name = "Alice", AddressId = 1, Address = address
+        };
+        _db.Add(user);
+        _db.SaveChanges();
+        _db.Entry(user).State = EntityState.Unchanged;
+        _db.Entry(address).State = EntityState.Unchanged;
+
+        var cs = Changeset<TestUserWithAddress>.Cast(
+                user,
+                new Dictionary<string, object?>
+                {
+                    ["Address"] = new Dictionary<string, object?> { ["Street"] = "New" }
+                },
+                ["Name"])
+            .CastAssoc<TestUserWithAddress, TestAddress>(
+                "Address", ["Street", "City"]);
+
+        var result = cs.ApplyTo(_db);
+
+        Assert.Same(user, result);
+        Assert.Same(address, result.Address);
+        Assert.Equal("New", address.Street);
+        Assert.Equal("Keep", address.City);
+        Assert.True(_db.Entry(address).Property(a => a.Street).IsModified);
+        Assert.False(_db.Entry(address).Property(a => a.City).IsModified);
+    }
+
+    [Fact]
     public async Task ValidateUniqueAsync_FieldNotInChanges_Skipped()
     {
         _db.Users.Add(new TestUser { Name = "Alice", Email = "alice@test.com" });

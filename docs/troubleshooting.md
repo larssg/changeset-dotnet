@@ -110,12 +110,10 @@ entity stored in `Data`.
 
 ## Applying a parent with `CastAssoc` fails
 
-`CastAssoc` stores `Changeset<TAssoc>` in the parent `Changes`. Core and EF
-apply operations do not recursively materialize it.
-
-Retrieve the child with `GetAssoc`, apply it explicitly, and remove the nested
-changeset from the parent's changes before applying the parent. See
-[Associations](associations.md#materialization-limitation).
+Core and EF apply operations recursively materialize child changesets. If
+application fails, verify that the parent and child are valid and that every
+inserted association type has a public parameterless constructor. See
+[Associations](associations.md#materialization).
 
 ## A uniqueness check passed but saving failed
 

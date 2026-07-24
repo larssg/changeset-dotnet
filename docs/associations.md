@@ -122,34 +122,23 @@ address?.Action; // ChangesetAction.Update
 
 If the existing association is `null`, the child uses insert semantics.
 
-## Materialization limitation
+## Materialization
 
-`CastAssoc` stores a `Changeset<TAssoc>` in the parent's `Changes`; the core
-`ApplyChanges` method does not recursively materialize it. Applying that parent
-directly attempts to assign the child changeset to the association property and
-is therefore not supported.
-
-Materialize and attach the child explicitly in application code:
+`ApplyChanges` recursively materializes child changesets created by `CastAssoc`:
 
 ```csharp
-var addressChangeset =
-    changeset.GetAssoc<User, Address>("Address")
-    ?? throw new InvalidOperationException("Address was not cast.");
-
-if (!changeset.IsValid || !addressChangeset.IsValid)
-    return;
-
-var address = addressChangeset.ApplyChanges();
-
-var parentWithoutAssoc = changeset with
-{
-    Changes = changeset.Changes.Remove("Address"),
-    CastFields = changeset.CastFields.Remove("Address")
-};
-
-var user = parentWithoutAssoc.ApplyChanges();
-user.Address = address;
+var user = changeset.ApplyChanges();
 ```
 
-Treat nested changesets as a casting and validation facility until recursive
-materialization is added to the library.
+For inserts, a new associated model is created. For updates, the existing
+association is copied before its changes are applied, so unchanged child data is
+preserved and the original object is not mutated. Nested associations are
+materialized recursively.
+
+Association types require a public parameterless constructor. Invalid child
+changesets make the parent invalid through propagated errors and cannot be
+applied.
+
+`ApplyTo` also handles associations recursively. On an Entity Framework update,
+it updates the existing tracked child entity and marks only changed scalar
+properties as modified.

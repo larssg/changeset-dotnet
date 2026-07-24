@@ -138,6 +138,5 @@ See [EF Core & ASP.NET Core](ef-core.md#apply-an-update) before choosing between
 
 ## Nested changesets
 
-The core apply operation does not recursively materialize a
-`Changeset<TAssoc>` stored by `CastAssoc`. Materialize the child explicitly as
-described in [Associations](associations.md#materialization-limitation).
+The core apply operation recursively materializes a `Changeset<TAssoc>` stored
+by `CastAssoc`. See [Associations](associations.md#materialization).

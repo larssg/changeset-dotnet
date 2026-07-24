@@ -21,7 +21,7 @@ object for updates, while EF Core `ApplyTo` mutates the tracked entity.
 - [Validation](validation/): Use built-in, custom, and asynchronous validators.
 - [Errors](errors/): Inspect structured errors and map them to application responses.
 - [Applying Changes](applying-changes/): Materialize valid inserts and updates and understand copy behavior.
-- [Associations](associations/): Cast and validate nested input, including current materialization limits.
+- [Associations](associations/): Cast, validate, and recursively materialize nested input.
 
 ## Integrations
 

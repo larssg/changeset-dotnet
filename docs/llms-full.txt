@@ -1159,9 +1159,8 @@ See [EF Core & ASP.NET Core](ef-core.md#apply-an-update) before choosing between
 
 ## Nested changesets
 
-The core apply operation does not recursively materialize a
-`Changeset<TAssoc>` stored by `CastAssoc`. Materialize the child explicitly as
-described in [Associations](associations.md#materialization-limitation).
+The core apply operation recursively materializes a `Changeset<TAssoc>` stored
+by `CastAssoc`. See [Associations](associations.md#materialization).
 
 ---
 
@@ -1291,37 +1290,26 @@ address?.Action; // ChangesetAction.Update
 
 If the existing association is `null`, the child uses insert semantics.
 
-## Materialization limitation
+## Materialization
 
-`CastAssoc` stores a `Changeset<TAssoc>` in the parent's `Changes`; the core
-`ApplyChanges` method does not recursively materialize it. Applying that parent
-directly attempts to assign the child changeset to the association property and
-is therefore not supported.
-
-Materialize and attach the child explicitly in application code:
+`ApplyChanges` recursively materializes child changesets created by `CastAssoc`:
 
 ```csharp
-var addressChangeset =
-    changeset.GetAssoc<User, Address>("Address")
-    ?? throw new InvalidOperationException("Address was not cast.");
-
-if (!changeset.IsValid || !addressChangeset.IsValid)
-    return;
-
-var address = addressChangeset.ApplyChanges();
-
-var parentWithoutAssoc = changeset with
-{
-    Changes = changeset.Changes.Remove("Address"),
-    CastFields = changeset.CastFields.Remove("Address")
-};
-
-var user = parentWithoutAssoc.ApplyChanges();
-user.Address = address;
+var user = changeset.ApplyChanges();
 ```
 
-Treat nested changesets as a casting and validation facility until recursive
-materialization is added to the library.
+For inserts, a new associated model is created. For updates, the existing
+association is copied before its changes are applied, so unchanged child data is
+preserved and the original object is not mutated. Nested associations are
+materialized recursively.
+
+Association types require a public parameterless constructor. Invalid child
+changesets make the parent invalid through propagated errors and cannot be
+applied.
+
+`ApplyTo` also handles associations recursively. On an Entity Framework update,
+it updates the existing tracked child entity and marks only changed scalar
+properties as modified.
 
 ---
 
@@ -1464,9 +1452,9 @@ need a custom validator or query.
 `ApplyTo<T>` and `ApplyToAsync<T>` require `T : class, new()`. Inserts therefore
 need a public parameterless constructor.
 
-The integration applies scalar changes stored directly in `Changes`. It does
-not recursively persist child changesets created by `CastAssoc`; handle nested
-entities explicitly.
+The integration recursively applies child changesets created by `CastAssoc`.
+On updates, existing tracked child entities are retained and only their changed
+scalar properties are marked modified.
 
 ## ASP.NET Core
 
@@ -2000,16 +1988,15 @@ var changeset = Changeset<User>
         address => address.ValidateRequired(["Street", "City"]));
 ```
 
-The parent reports fields such as `Address.Street`. Retrieve and materialize the
-child explicitly:
+The parent reports fields such as `Address.Street`. Apply the parent to
+recursively materialize the child:
 
 ```csharp
-var addressChangeset =
-    changeset.GetAssoc<User, Address>("Address");
+var user = changeset.ApplyChanges();
 ```
 
-Follow the complete materialization pattern in
-[Associations](associations.md#materialization-limitation).
+See [Associations](associations.md#materialization) for insert, update, and
+Entity Framework behavior.
 
 ## Enforce uniqueness safely
 
@@ -2316,8 +2303,8 @@ Changeset<T> ValidateAssoc<T, TAssoc>(
 Changeset<TAssoc>? GetAssoc<T, TAssoc>(string field);
 ```
 
-Both types must be classes. See [Associations](associations.md), including the
-current recursive-materialization limitation.
+Both types must be classes. See [Associations](associations.md) for recursive
+materialization behavior.
 
 ## Applying
 
@@ -2526,12 +2513,10 @@ entity stored in `Data`.
 
 ## Applying a parent with `CastAssoc` fails
 
-`CastAssoc` stores `Changeset<TAssoc>` in the parent `Changes`. Core and EF
-apply operations do not recursively materialize it.
-
-Retrieve the child with `GetAssoc`, apply it explicitly, and remove the nested
-changeset from the parent's changes before applying the parent. See
-[Associations](associations.md#materialization-limitation).
+Core and EF apply operations recursively materialize child changesets. If
+application fails, verify that the parent and child are valid and that every
+inserted association type has a public parameterless constructor. See
+[Associations](associations.md#materialization).
 
 ## A uniqueness check passed but saving failed
 

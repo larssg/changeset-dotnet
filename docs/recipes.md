@@ -234,16 +234,15 @@ var changeset = Changeset<User>
         address => address.ValidateRequired(["Street", "City"]));
 ```
 
-The parent reports fields such as `Address.Street`. Retrieve and materialize the
-child explicitly:
+The parent reports fields such as `Address.Street`. Apply the parent to
+recursively materialize the child:
 
 ```csharp
-var addressChangeset =
-    changeset.GetAssoc<User, Address>("Address");
+var user = changeset.ApplyChanges();
 ```
 
-Follow the complete materialization pattern in
-[Associations](associations.md#materialization-limitation).
+See [Associations](associations.md#materialization) for insert, update, and
+Entity Framework behavior.
 
 ## Enforce uniqueness safely
 

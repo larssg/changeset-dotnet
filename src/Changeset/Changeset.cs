@@ -4,7 +4,7 @@ using Changeset.Casting;
 
 namespace Changeset;
 
-public sealed record Changeset<T> where T : class
+public sealed record Changeset<T> : IChangesetValue where T : class
 {
     public T? Data { get; init; }
     public ImmutableDictionary<string, object?> Changes { get; init; }
@@ -14,6 +14,10 @@ public sealed record Changeset<T> where T : class
     public ChangesetAction Action { get; init; }
 
     public bool IsValid => Errors.IsEmpty;
+
+    Type IChangesetValue.ModelType => typeof(T);
+    object? IChangesetValue.UntypedData => Data;
+    ImmutableDictionary<string, object?> IChangesetValue.UntypedChanges => Changes;
 
     internal Changeset(
         T? data,
