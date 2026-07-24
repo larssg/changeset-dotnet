@@ -1,3 +1,5 @@
+using Changeset.Validators;
+
 namespace Changeset.Tests;
 
 public class ExpressionCastTests
@@ -86,5 +88,79 @@ public class ExpressionCastTests
 
         Assert.True(cs.IsValid);
         Assert.Equal(4, cs.Changes.Count);
+    }
+
+    [Fact]
+    public void Cast_NestedPropertyAccess_Throws()
+    {
+        var @params = new Dictionary<string, object?> { ["City"] = "Aarhus" };
+
+        var ex = Assert.Throws<ArgumentException>(() =>
+            Changeset<UserWithAddress>.Cast(@params, u => u.Address!.City));
+
+        Assert.Contains("directly on the lambda parameter", ex.Message);
+    }
+
+    [Fact]
+    public void Cast_NestedPropertyInAnonymousType_Throws()
+    {
+        var @params = new Dictionary<string, object?> { ["Name"] = "Alice" };
+
+        var ex = Assert.Throws<ArgumentException>(() =>
+            Changeset<UserWithAddress>.Cast(@params, u => new { u.Name, u.Address!.City }));
+
+        Assert.Contains("directly on the lambda parameter", ex.Message);
+    }
+
+    [Fact]
+    public void Cast_AliasedAnonymousMember_Throws()
+    {
+        var @params = new Dictionary<string, object?> { ["Name"] = "Alice" };
+
+        var ex = Assert.Throws<ArgumentException>(() =>
+            Changeset<User>.Cast(@params, u => new { FullName = u.Name }));
+
+        Assert.Contains("Aliases are not supported", ex.Message);
+    }
+
+    [Fact]
+    public void Cast_CapturedVariableAccess_Throws()
+    {
+        var other = new User { Name = "Bob" };
+        var @params = new Dictionary<string, object?> { ["Name"] = "Alice" };
+
+        Assert.Throws<ArgumentException>(() =>
+            Changeset<User>.Cast(@params, u => other.Name));
+    }
+
+    [Fact]
+    public void Cast_MethodCallInAnonymousType_Throws()
+    {
+        var @params = new Dictionary<string, object?> { ["Name"] = "Alice" };
+
+        var ex = Assert.Throws<ArgumentException>(() =>
+            Changeset<User>.Cast(@params, u => new { Name = u.Name.ToUpper() }));
+
+        Assert.Contains("must be a property access", ex.Message);
+    }
+
+    [Fact]
+    public void ValidateRequired_NestedPropertyAccess_Throws()
+    {
+        var cs = Changeset<UserWithAddress>.Cast(
+            new Dictionary<string, object?> { ["Name"] = "Alice" }, ["Name"]);
+
+        Assert.Throws<ArgumentException>(() =>
+            cs.ValidateRequired(u => u.Address!.City));
+    }
+
+    [Fact]
+    public void ValidateFormat_NestedPropertyAccess_Throws()
+    {
+        var cs = Changeset<UserWithAddress>.Cast(
+            new Dictionary<string, object?> { ["Name"] = "Alice" }, ["Name"]);
+
+        Assert.Throws<ArgumentException>(() =>
+            cs.ValidateFormat(u => u.Address!.City, "^[A-Z]"));
     }
 }
