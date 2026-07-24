@@ -1,28 +1,23 @@
 # Suggested Library Improvements
 
-This document records a review of the library on the `main` branch. The review
-covered the core API, validation and casting behavior, Entity Framework
-integration, source generator, tests, packaging, and CI configuration.
+This document records a review of the library and tracks the resulting work.
+The review covered the core API, validation and casting behavior, Entity
+Framework integration, source generator, tests, packaging, and CI
+configuration.
 
-At the time of review, all 148 tests passed:
+The current standard solution test run covers 154 tests:
 
-- 115 core tests
-- 17 Entity Framework tests
+- 119 core tests
+- 19 Entity Framework tests
 - 16 source-generator tests
-
-The source-generator tests had to be run separately because their projects are
-not currently included in the solution.
 
 ## Recommended priorities
 
 ### 1. Add the generator projects to the solution and CI — completed
 
-`Changeset.Generators` and `Changeset.Generators.Tests` are missing from
-`Changeset.slnx`. As a result, the normal restore, build, and test workflow
-silently excludes the generator package and its tests.
-
-Add both projects to the solution so generator regressions fail the standard CI
-workflow.
+`Changeset.Generators` and `Changeset.Generators.Tests` are now included in
+`Changeset.slnx`, so the standard restore, build, and test workflow covers the
+generator package and its tests.
 
 ### 2. Complete association materialization — completed
 
@@ -31,15 +26,16 @@ changesets. Core application creates a copy of an updated association, preservin
 unchanged data. Entity Framework updates the existing tracked association and
 marks only its changed scalar properties as modified.
 
-Important cases to cover include:
+Covered behavior includes:
 
 - Association inserts and updates
 - Initially null associations
 - Invalid child changesets
 - Preservation of unchanged association data
 - Nested associations
-- Association collections remain out of scope until collection casting is
-  introduced.
+
+Association collections remain out of scope until collection casting is
+introduced.
 
 ### 3. Harden the source generator
 
@@ -143,8 +139,8 @@ Consider adding:
 
 ## Suggested implementation order
 
-If only three improvements are selected initially:
+The next three recommended improvements are:
 
-1. Include the generator projects in the solution and CI.
-2. Harden generator behavior and diagnostics.
-3. Implement recursive association materialization.
+1. Harden generator behavior and diagnostics.
+2. Fix inherited-property analysis.
+3. Strengthen field-expression validation.
