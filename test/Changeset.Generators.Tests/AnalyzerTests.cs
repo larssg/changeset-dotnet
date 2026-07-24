@@ -1,4 +1,8 @@
+using System.Collections.Immutable;
 using Changeset;
+using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
+using Microsoft.CodeAnalysis.Diagnostics;
 
 namespace Changeset.Generators.Tests;
 
@@ -34,5 +38,93 @@ public class AnalyzerTests
 
         // The cast itself still succeeds (field just won't match a property)
         Assert.NotNull(cs);
+    }
+
+    [Fact]
+    public async Task InheritedWritableProperty_IsAccepted()
+    {
+        const string source = """
+            using System.Collections.Generic;
+            using Changeset;
+
+            public class Entity
+            {
+                public string ExternalId { get; set; } = "";
+            }
+
+            [ChangesetTarget]
+            public class Customer : Entity
+            {
+                public string Name { get; set; } = "";
+            }
+
+            public static class Usage
+            {
+                public static void Cast()
+                {
+                    Changeset<Customer>.Cast(
+                        new Dictionary<string, object?>(),
+                        ["ExternalId", "Name"]);
+                }
+            }
+            """;
+
+        var diagnostics = await RunAnalyzer(source);
+
+        Assert.DoesNotContain(diagnostics, diagnostic =>
+            diagnostic.Id is "CHGSET001" or "CHGSET002");
+    }
+
+    [Fact]
+    public async Task MisspelledInheritedProperty_SuggestsInheritedProperty()
+    {
+        const string source = """
+            using System.Collections.Generic;
+            using Changeset;
+
+            public class Entity
+            {
+                public string ExternalId { get; set; } = "";
+            }
+
+            [ChangesetTarget]
+            public class Customer : Entity
+            {
+            }
+
+            public static class Usage
+            {
+                public static void Cast()
+                {
+                    Changeset<Customer>.Cast(
+                        new Dictionary<string, object?>(),
+                        ["ExternalIt"]);
+                }
+            }
+            """;
+
+        var diagnostics = await RunAnalyzer(source);
+        var diagnostic = Assert.Single(diagnostics, item => item.Id == "CHGSET001");
+
+        Assert.Contains("did you mean 'ExternalId'?", diagnostic.GetMessage());
+    }
+
+    private static async Task<ImmutableArray<Diagnostic>> RunAnalyzer(string source)
+    {
+        var syntaxTree = CSharpSyntaxTree.ParseText(
+            source,
+            CSharpParseOptions.Default.WithLanguageVersion(LanguageVersion.Latest));
+        var references = ((string)AppContext.GetData("TRUSTED_PLATFORM_ASSEMBLIES")!)
+            .Split(Path.PathSeparator)
+            .Select(path => MetadataReference.CreateFromFile(path))
+            .Append(MetadataReference.CreateFromFile(typeof(ChangesetTargetAttribute).Assembly.Location));
+        var compilation = CSharpCompilation.Create(
+            "AnalyzerTests",
+            [syntaxTree],
+            references,
+            new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary));
+        var analyzers = ImmutableArray.Create<DiagnosticAnalyzer>(new FieldNameAnalyzer());
+
+        return await compilation.WithAnalyzers(analyzers).GetAnalyzerDiagnosticsAsync();
     }
 }

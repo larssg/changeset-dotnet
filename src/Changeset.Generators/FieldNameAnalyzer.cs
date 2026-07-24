@@ -72,16 +72,10 @@ public class FieldNameAnalyzer : DiagnosticAnalyzer
 
         // Get writable properties
         var validFields = new HashSet<string>();
-        foreach (var member in targetType.GetMembers())
+        foreach (var property in TargetPropertyInspector.GetPublicInstanceProperties(targetType))
         {
-            if (member is IPropertySymbol prop &&
-                prop.DeclaredAccessibility == Accessibility.Public &&
-                !prop.IsReadOnly &&
-                !prop.IsStatic &&
-                prop.SetMethod is not null)
-            {
-                validFields.Add(prop.Name);
-            }
+            if (TargetPropertyInspector.GetUnsupportedReason(property) is null)
+                validFields.Add(property.Name);
         }
 
         // Find the permitted fields argument (IReadOnlyList<string>)
