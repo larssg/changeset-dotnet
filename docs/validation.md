@@ -78,6 +78,15 @@ changeset.ValidateFormat(
 Format validation applies only to changed string values. It uses
 `Regex.IsMatch` and stores the pattern in error metadata.
 
+To use a compile-time generated regex, pass the generated `Regex` instance:
+
+```csharp
+[GeneratedRegex(@"^[^@]+@[^@]+\.[^@]+$")]
+private static partial Regex EmailRegex();
+
+changeset.ValidateFormat(user => user.Email, EmailRegex());
+```
+
 | Default message | Code | Metadata |
 |---|---|---|
 | `has invalid format` | `format` | `pattern` |
