@@ -1,5 +1,4 @@
 using System.Reflection;
-using System.Runtime.CompilerServices;
 using PublicApiGenerator;
 
 namespace Changeset.PublicApi.Tests;
@@ -52,6 +51,14 @@ public class PublicApiApprovalTests
     private static string Normalize(string api) =>
         api.Replace("\r\n", "\n").TrimEnd() + "\n";
 
-    private static string ApprovedDirectory([CallerFilePath] string sourcePath = "") =>
-        Path.Combine(Path.GetDirectoryName(sourcePath)!, "approved");
+    // Not [CallerFilePath]: deterministic CI builds remap source paths to /_/...,
+    // which no longer exists on disk. The project directory is baked in by the
+    // csproj as assembly metadata instead.
+    private static string ApprovedDirectory() =>
+        Path.Combine(
+            typeof(PublicApiApprovalTests).Assembly
+                .GetCustomAttributes<AssemblyMetadataAttribute>()
+                .Single(attribute => attribute.Key == "ProjectDirectory")
+                .Value!,
+            "approved");
 }

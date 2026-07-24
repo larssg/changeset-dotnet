@@ -25,6 +25,15 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- Deterministic CI builds remap [CallerFilePath] to /_/..., so the tests
+         locate the approved files through this instead. -->
+    <AssemblyAttribute Include="System.Reflection.AssemblyMetadata">
+      <_Parameter1>ProjectDirectory</_Parameter1>
+      <_Parameter2>$(MSBuildProjectDirectory)</_Parameter2>
+    </AssemblyAttribute>
+  </ItemGroup>
+
+  <ItemGroup>
     <None Include="approved\*.txt" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
