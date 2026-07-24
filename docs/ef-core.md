@@ -103,11 +103,16 @@ var changeset = await Changeset<User>
 
 Both methods:
 
-- skip the database query when the field is absent from `Changes`
+- skip the database query when none of the validated fields appear in `Changes`
+- skip the query when a compared value is null — a null component never
+  conflicts under SQL unique-index semantics
+- exclude the current row by primary key on updates, so an update never
+  conflicts with its own stored row
 - query with `AsNoTracking`
 - add `has already been taken` with the code `uniqueness` on conflict
 - accept a custom message
-- provide string and direct-property-expression overloads
+- provide string, expression, and multi-field overloads
+- throw `ArgumentException` when a field is not mapped in the EF model
 
 ```csharp
 changeset = await changeset.ValidateUniqueAsync(
@@ -120,15 +125,87 @@ changeset = await changeset.ValidateUniqueAsync(
 An unchanged value in an ordinary update cast is omitted from `Changes`, so its
 uniqueness query is skipped.
 
+Primary-key exclusion reads the key values from `changeset.Data` using the
+context's model metadata. It is skipped when the key is shadow-state or unset;
+composite keys are supported.
+
+#### Composite uniqueness
+
+Validate a combination of fields with an anonymous type or a field-name list:
+
+```csharp
+changeset = changeset.ValidateUnique(
+    user => new { user.CompanyId, user.Email },
+    dbContext);
+
+changeset = changeset.ValidateUnique(
+    ["CompanyId", "Email"],
+    dbContext);
+```
+
+The query runs when at least one of the fields appears in `Changes`; values
+for the remaining fields are read from `Data`. On conflict, one error with the
+code `uniqueness` is added to the first field, and the error metadata contains
+the full field list under the `fields` key.
+
+#### Scoped uniqueness
+
+Pass `scope` to narrow the query — for example tenant scoping or matching a
+filtered (partial) unique index:
+
+```csharp
+changeset = await changeset.ValidateUniqueAsync(
+    user => user.Email,
+    dbContext,
+    scope: user => !user.IsDeleted,
+    cancellationToken: cancellationToken);
+```
+
 !!! important
 
-    Application-side uniqueness checks do not replace a database unique
-    constraint. Concurrent requests can pass validation before either writes.
-    Keep the constraint and translate its database exception when necessary.
+    Uniqueness validation is an advisory preflight check, not a guarantee.
+    Concurrent requests can both pass validation before either writes, and
+    normalization or provider-specific collation rules can differ from the
+    database index. Keep a database unique constraint authoritative and map
+    its exception with `TryApplyToAsync` when a friendly error is needed.
 
-The query compares one property for equality. Composite uniqueness, filtered
-indexes, tenant scoping, normalization, and provider-specific comparison rules
-need a custom validator or query.
+### Map constraint violations on save
+
+`TryApplyToAsync` applies a changeset, calls `SaveChangesAsync`, and lets the
+caller translate a `DbUpdateException` — typically a unique-constraint
+violation — into a changeset error instead of an unhandled exception:
+
+```csharp
+ChangesetResult<User> result = await changeset.TryApplyToAsync(
+    dbContext,
+    exception => IsUniqueEmailViolation(exception)
+        ? ChangesetError.For("Email", "has already been taken", "uniqueness")
+        : null,
+    cancellationToken);
+
+return result switch
+{
+    ChangesetResult<User>.Valid(var user) =>
+        Results.Created($"/users/{user.Id}", user),
+    ChangesetResult<User>.Invalid(var errors) =>
+        Results.ValidationProblem(errors.ToValidationErrors()),
+};
+```
+
+The method:
+
+- returns `ChangesetResult<T>.Invalid` without touching the database when the
+  changeset already has errors
+- returns `ChangesetResult<T>.Valid` with the saved entity on success
+- calls the mapper when `SaveChangesAsync` throws `DbUpdateException`; a
+  returned `ChangesetError` produces an `Invalid` result, `null` rethrows
+- leaves the failed entity tracked by the context — dispose the context or
+  detach the entry before retrying
+
+Detecting a unique violation is provider-specific: inspect
+`exception.InnerException` for the provider's error code (for example
+`2601`/`2627` for SQL Server or `23505` for PostgreSQL) and the constraint or
+index name.
 
 ### Entity requirements and limitations
 

@@ -247,7 +247,8 @@ Entity Framework behavior.
 ## Enforce uniqueness safely
 
 Use changeset validation for a friendly early error and a database constraint
-for correctness:
+for correctness. `TryApplyToAsync` maps the constraint violation into a
+changeset error when the preflight check loses the race:
 
 ```csharp
 changeset = await changeset.ValidateUniqueAsync(
@@ -258,22 +259,22 @@ changeset = await changeset.ValidateUniqueAsync(
 if (!changeset.IsValid)
     return Results.ValidationProblem(changeset.ToValidationErrors());
 
-try
-{
-    var user = await changeset.ApplyToAsync(
-        dbContext,
-        cancellationToken);
+var result = await changeset.TryApplyToAsync(
+    dbContext,
+    exception => IsUniqueEmailViolation(exception)
+        ? ChangesetError.For("Email", "has already been taken", "uniqueness")
+        : null,
+    cancellationToken);
 
-    return Results.Created($"/users/{user.Id}", user);
-}
-catch (DbUpdateException exception)
-    when (IsUniqueEmailViolation(exception))
+return result switch
 {
-    return Results.Conflict(new
-    {
-        error = "Email is already registered."
-    });
-}
+    ChangesetResult<User>.Valid(var user) =>
+        Results.Created($"/users/{user.Id}", user),
+    ChangesetResult<User>.Invalid(var errors) =>
+        Results.ValidationProblem(errors.ToValidationErrors()),
+};
 ```
 
-Provider-specific code must implement `IsUniqueEmailViolation`.
+Provider-specific code must implement `IsUniqueEmailViolation` — inspect the
+`DbUpdateException.InnerException` for the provider's error code (for example
+`2601`/`2627` for SQL Server or `23505` for PostgreSQL) and the index name.
