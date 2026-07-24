@@ -19,6 +19,18 @@ public static class AspNetCoreExtensions
     }
 
     /// <summary>
+    /// Converts an error list — for example from <see cref="ChangesetResult{T}.Invalid"/> —
+    /// into a ValidationProblemDetails-compatible dictionary.
+    /// </summary>
+    public static IDictionary<string, string[]> ToValidationErrors(
+        this ImmutableArray<ChangesetError> errors)
+    {
+        return errors
+            .GroupBy(e => e.Field)
+            .ToDictionary(g => g.Key, g => g.Select(e => e.Message).ToArray());
+    }
+
+    /// <summary>
     /// Returns a ValidationProblem IResult if the changeset is invalid, or null if valid.
     /// Useful for early-return patterns in minimal APIs.
     /// </summary>

@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using Changeset;
 using Changeset.EntityFramework;
 using Changeset.Validators;
@@ -89,5 +90,20 @@ public class AspNetCoreExtensionsTests
         cs.AddToModelState(modelState);
 
         Assert.True(modelState.IsValid);
+    }
+
+    [Fact]
+    public void ToValidationErrors_ErrorArray_MapsErrorsByField()
+    {
+        var errors = ImmutableArray.Create(
+            ChangesetError.For("Email", "has already been taken", "uniqueness"),
+            ChangesetError.For("Email", "has invalid format", "format"),
+            ChangesetError.For("Name", "can't be blank", "required"));
+
+        var result = errors.ToValidationErrors();
+
+        Assert.Equal(2, result.Count);
+        Assert.Equal(["has already been taken", "has invalid format"], result["Email"]);
+        Assert.Equal(["can't be blank"], result["Name"]);
     }
 }

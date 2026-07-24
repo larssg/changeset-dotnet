@@ -308,29 +308,50 @@ T ApplyTo<T>(DbContext context);
 Task<T> ApplyToAsync<T>(
     DbContext context,
     CancellationToken cancellationToken = default);
+
+Task<ChangesetResult<T>> TryApplyToAsync<T>(
+    DbContext context,
+    Func<DbUpdateException, ChangesetError?> mapSaveError,
+    CancellationToken cancellationToken = default);
 ```
 
-Both require `T : class, new()`.
+All three require `T : class, new()`. `TryApplyToAsync` returns `Invalid` for
+an already-invalid changeset, saves and returns `Valid` otherwise, and passes
+a `DbUpdateException` to `mapSaveError`; a returned error yields `Invalid`
+while `null` rethrows.
 
 ```csharp
 Changeset<T> ValidateUnique(
     string field,
     DbContext context,
-    string? message = null);
+    string? message = null,
+    Expression<Func<T, bool>>? scope = null);
 
 Changeset<T> ValidateUnique<TValue>(
-    Expression<Func<T, TValue>> field,
+    Expression<Func<T, TValue>> fields,
     DbContext context,
-    string? message = null);
+    string? message = null,
+    Expression<Func<T, bool>>? scope = null);
+
+Changeset<T> ValidateUnique(
+    IReadOnlyList<string> fields,
+    DbContext context,
+    string? message = null,
+    Expression<Func<T, bool>>? scope = null);
 
 Task<Changeset<T>> ValidateUniqueAsync(
     string field,
     DbContext context,
     string? message = null,
+    Expression<Func<T, bool>>? scope = null,
     CancellationToken cancellationToken = default);
 ```
 
-The async method also has a typed property overload.
+The async method has the same expression and field-list overloads. The
+expression form accepts a single property (`u => u.Email`) or an anonymous
+type for composite uniqueness (`u => new { u.TenantId, u.Email }`). `scope`
+narrows the uniqueness query. On updates the current row is excluded by
+primary key. An unmapped field throws `ArgumentException`.
 
 ## ASP.NET Core
 
@@ -338,10 +359,15 @@ Extension methods live in `Changeset.EntityFramework`.
 
 ```csharp
 IDictionary<string, string[]> ToValidationErrors<T>();
+IDictionary<string, string[]> ToValidationErrors(
+    this ImmutableArray<ChangesetError> errors);
 IResult? ToValidationProblemOrNull<T>();
 HttpValidationProblemDetails ToProblemDetails<T>();
 void AddToModelState<T>(ModelStateDictionary modelState);
 ```
+
+The `ImmutableArray<ChangesetError>` overload converts an error list — for
+example from `ChangesetResult<T>.Invalid` — without a changeset instance.
 
 See [EF Core & ASP.NET Core](ef-core.md#aspnet-core) for response examples.
 

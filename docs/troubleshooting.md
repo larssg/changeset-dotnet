@@ -121,16 +121,19 @@ This can happen when concurrent requests validate the same value. A uniqueness
 validator is an early user-friendly check, not a concurrency guarantee.
 
 Keep a database unique constraint and translate the provider-specific
-`DbUpdateException`. See
+`DbUpdateException` with `TryApplyToAsync`. See
 [Enforce uniqueness safely](recipes.md#enforce-uniqueness-safely).
 
 ## `ValidateUnique` did not query the database
 
-Uniqueness validation skips a field absent from `Changes`. In an update,
-casting removes values equal to the existing value, so an unchanged unique
-field does not trigger a query.
+Uniqueness validation skips the query when none of the validated fields appear
+in `Changes`. In an update, casting removes values equal to the existing
+value, so an unchanged unique field does not trigger a query. The query is
+also skipped when a compared value is null, since a null component never
+conflicts under SQL unique-index semantics.
 
-Also verify that the string field name identifies a mapped EF property.
+A field name that does not identify a mapped EF property throws
+`ArgumentException`.
 
 ## ASP.NET responses do not include error codes
 

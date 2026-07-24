@@ -1420,11 +1420,16 @@ var changeset = await Changeset<User>
 
 Both methods:
 
-- skip the database query when the field is absent from `Changes`
+- skip the database query when none of the validated fields appear in `Changes`
+- skip the query when a compared value is null — a null component never
+  conflicts under SQL unique-index semantics
+- exclude the current row by primary key on updates, so an update never
+  conflicts with its own stored row
 - query with `AsNoTracking`
 - add `has already been taken` with the code `uniqueness` on conflict
 - accept a custom message
-- provide string and direct-property-expression overloads
+- provide string, expression, and multi-field overloads
+- throw `ArgumentException` when a field is not mapped in the EF model
 
 ```csharp
 changeset = await changeset.ValidateUniqueAsync(
@@ -1437,15 +1442,87 @@ changeset = await changeset.ValidateUniqueAsync(
 An unchanged value in an ordinary update cast is omitted from `Changes`, so its
 uniqueness query is skipped.
 
+Primary-key exclusion reads the key values from `changeset.Data` using the
+context's model metadata. It is skipped when the key is shadow-state or unset;
+composite keys are supported.
+
+#### Composite uniqueness
+
+Validate a combination of fields with an anonymous type or a field-name list:
+
+```csharp
+changeset = changeset.ValidateUnique(
+    user => new { user.CompanyId, user.Email },
+    dbContext);
+
+changeset = changeset.ValidateUnique(
+    ["CompanyId", "Email"],
+    dbContext);
+```
+
+The query runs when at least one of the fields appears in `Changes`; values
+for the remaining fields are read from `Data`. On conflict, one error with the
+code `uniqueness` is added to the first field, and the error metadata contains
+the full field list under the `fields` key.
+
+#### Scoped uniqueness
+
+Pass `scope` to narrow the query — for example tenant scoping or matching a
+filtered (partial) unique index:
+
+```csharp
+changeset = await changeset.ValidateUniqueAsync(
+    user => user.Email,
+    dbContext,
+    scope: user => !user.IsDeleted,
+    cancellationToken: cancellationToken);
+```
+
 !!! important
 
-    Application-side uniqueness checks do not replace a database unique
-    constraint. Concurrent requests can pass validation before either writes.
-    Keep the constraint and translate its database exception when necessary.
+    Uniqueness validation is an advisory preflight check, not a guarantee.
+    Concurrent requests can both pass validation before either writes, and
+    normalization or provider-specific collation rules can differ from the
+    database index. Keep a database unique constraint authoritative and map
+    its exception with `TryApplyToAsync` when a friendly error is needed.
 
-The query compares one property for equality. Composite uniqueness, filtered
-indexes, tenant scoping, normalization, and provider-specific comparison rules
-need a custom validator or query.
+### Map constraint violations on save
+
+`TryApplyToAsync` applies a changeset, calls `SaveChangesAsync`, and lets the
+caller translate a `DbUpdateException` — typically a unique-constraint
+violation — into a changeset error instead of an unhandled exception:
+
+```csharp
+ChangesetResult<User> result = await changeset.TryApplyToAsync(
+    dbContext,
+    exception => IsUniqueEmailViolation(exception)
+        ? ChangesetError.For("Email", "has already been taken", "uniqueness")
+        : null,
+    cancellationToken);
+
+return result switch
+{
+    ChangesetResult<User>.Valid(var user) =>
+        Results.Created($"/users/{user.Id}", user),
+    ChangesetResult<User>.Invalid(var errors) =>
+        Results.ValidationProblem(errors.ToValidationErrors()),
+};
+```
+
+The method:
+
+- returns `ChangesetResult<T>.Invalid` without touching the database when the
+  changeset already has errors
+- returns `ChangesetResult<T>.Valid` with the saved entity on success
+- calls the mapper when `SaveChangesAsync` throws `DbUpdateException`; a
+  returned `ChangesetError` produces an `Invalid` result, `null` rethrows
+- leaves the failed entity tracked by the context — dispose the context or
+  detach the entry before retrying
+
+Detecting a unique violation is provider-specific: inspect
+`exception.InnerException` for the provider's error code (for example
+`2601`/`2627` for SQL Server or `23505` for PostgreSQL) and the constraint or
+index name.
 
 ### Entity requirements and limitations
 
@@ -2001,7 +2078,8 @@ Entity Framework behavior.
 ## Enforce uniqueness safely
 
 Use changeset validation for a friendly early error and a database constraint
-for correctness:
+for correctness. `TryApplyToAsync` maps the constraint violation into a
+changeset error when the preflight check loses the race:
 
 ```csharp
 changeset = await changeset.ValidateUniqueAsync(
@@ -2012,25 +2090,25 @@ changeset = await changeset.ValidateUniqueAsync(
 if (!changeset.IsValid)
     return Results.ValidationProblem(changeset.ToValidationErrors());
 
-try
-{
-    var user = await changeset.ApplyToAsync(
-        dbContext,
-        cancellationToken);
+var result = await changeset.TryApplyToAsync(
+    dbContext,
+    exception => IsUniqueEmailViolation(exception)
+        ? ChangesetError.For("Email", "has already been taken", "uniqueness")
+        : null,
+    cancellationToken);
 
-    return Results.Created($"/users/{user.Id}", user);
-}
-catch (DbUpdateException exception)
-    when (IsUniqueEmailViolation(exception))
+return result switch
 {
-    return Results.Conflict(new
-    {
-        error = "Email is already registered."
-    });
-}
+    ChangesetResult<User>.Valid(var user) =>
+        Results.Created($"/users/{user.Id}", user),
+    ChangesetResult<User>.Invalid(var errors) =>
+        Results.ValidationProblem(errors.ToValidationErrors()),
+};
 ```
 
-Provider-specific code must implement `IsUniqueEmailViolation`.
+Provider-specific code must implement `IsUniqueEmailViolation` — inspect the
+`DbUpdateException.InnerException` for the provider's error code (for example
+`2601`/`2627` for SQL Server or `23505` for PostgreSQL) and the index name.
 
 ---
 
@@ -2346,29 +2424,50 @@ T ApplyTo<T>(DbContext context);
 Task<T> ApplyToAsync<T>(
     DbContext context,
     CancellationToken cancellationToken = default);
+
+Task<ChangesetResult<T>> TryApplyToAsync<T>(
+    DbContext context,
+    Func<DbUpdateException, ChangesetError?> mapSaveError,
+    CancellationToken cancellationToken = default);
 ```
 
-Both require `T : class, new()`.
+All three require `T : class, new()`. `TryApplyToAsync` returns `Invalid` for
+an already-invalid changeset, saves and returns `Valid` otherwise, and passes
+a `DbUpdateException` to `mapSaveError`; a returned error yields `Invalid`
+while `null` rethrows.
 
 ```csharp
 Changeset<T> ValidateUnique(
     string field,
     DbContext context,
-    string? message = null);
+    string? message = null,
+    Expression<Func<T, bool>>? scope = null);
 
 Changeset<T> ValidateUnique<TValue>(
-    Expression<Func<T, TValue>> field,
+    Expression<Func<T, TValue>> fields,
     DbContext context,
-    string? message = null);
+    string? message = null,
+    Expression<Func<T, bool>>? scope = null);
+
+Changeset<T> ValidateUnique(
+    IReadOnlyList<string> fields,
+    DbContext context,
+    string? message = null,
+    Expression<Func<T, bool>>? scope = null);
 
 Task<Changeset<T>> ValidateUniqueAsync(
     string field,
     DbContext context,
     string? message = null,
+    Expression<Func<T, bool>>? scope = null,
     CancellationToken cancellationToken = default);
 ```
 
-The async method also has a typed property overload.
+The async method has the same expression and field-list overloads. The
+expression form accepts a single property (`u => u.Email`) or an anonymous
+type for composite uniqueness (`u => new { u.TenantId, u.Email }`). `scope`
+narrows the uniqueness query. On updates the current row is excluded by
+primary key. An unmapped field throws `ArgumentException`.
 
 ## ASP.NET Core
 
@@ -2376,10 +2475,15 @@ Extension methods live in `Changeset.EntityFramework`.
 
 ```csharp
 IDictionary<string, string[]> ToValidationErrors<T>();
+IDictionary<string, string[]> ToValidationErrors(
+    this ImmutableArray<ChangesetError> errors);
 IResult? ToValidationProblemOrNull<T>();
 HttpValidationProblemDetails ToProblemDetails<T>();
 void AddToModelState<T>(ModelStateDictionary modelState);
 ```
+
+The `ImmutableArray<ChangesetError>` overload converts an error list — for
+example from `ChangesetResult<T>.Invalid` — without a changeset instance.
 
 See [EF Core & ASP.NET Core](ef-core.md#aspnet-core) for response examples.
 
@@ -2524,16 +2628,19 @@ This can happen when concurrent requests validate the same value. A uniqueness
 validator is an early user-friendly check, not a concurrency guarantee.
 
 Keep a database unique constraint and translate the provider-specific
-`DbUpdateException`. See
+`DbUpdateException` with `TryApplyToAsync`. See
 [Enforce uniqueness safely](recipes.md#enforce-uniqueness-safely).
 
 ## `ValidateUnique` did not query the database
 
-Uniqueness validation skips a field absent from `Changes`. In an update,
-casting removes values equal to the existing value, so an unchanged unique
-field does not trigger a query.
+Uniqueness validation skips the query when none of the validated fields appear
+in `Changes`. In an update, casting removes values equal to the existing
+value, so an unchanged unique field does not trigger a query. The query is
+also skipped when a compared value is null, since a null component never
+conflicts under SQL unique-index semantics.
 
-Also verify that the string field name identifies a mapped EF property.
+A field name that does not identify a mapped EF property throws
+`ArgumentException`.
 
 ## ASP.NET responses do not include error codes
 
