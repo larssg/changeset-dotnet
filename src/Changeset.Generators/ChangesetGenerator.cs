@@ -13,6 +13,22 @@ public class ChangesetGenerator : IIncrementalGenerator
 {
     private const string AttributeFullName = "Changeset.ChangesetTargetAttribute";
 
+    private static readonly DiagnosticDescriptor UnsupportedType = new(
+        "CHANGESETGEN001",
+        "Unsupported changeset target type",
+        "Changeset target '{0}' is not supported: {1}",
+        "Changeset.Generator",
+        DiagnosticSeverity.Error,
+        isEnabledByDefault: true);
+
+    private static readonly DiagnosticDescriptor UnsupportedProperty = new(
+        "CHANGESETGEN002",
+        "Unsupported changeset target property",
+        "Property '{0}' on changeset target '{1}' is not supported: {2}",
+        "Changeset.Generator",
+        DiagnosticSeverity.Error,
+        isEnabledByDefault: true);
+
     public void Initialize(IncrementalGeneratorInitializationContext context)
     {
         // Find all classes and records decorated with [ChangesetTarget]
@@ -26,6 +42,12 @@ public class ChangesetGenerator : IIncrementalGenerator
 
         context.RegisterSourceOutput(classDeclarations, static (spc, model) =>
         {
+            foreach (var diagnostic in model.Diagnostics)
+                spc.ReportDiagnostic(diagnostic);
+
+            if (model.Diagnostics.Length != 0)
+                return;
+
             var source = GenerateSource(model);
             var hintName = (model.Namespace is not null ? $"{model.Namespace}.{model.TypeName}" : model.TypeName)
                 .Replace("::", ".");
@@ -38,28 +60,78 @@ public class ChangesetGenerator : IIncrementalGenerator
         if (context.TargetSymbol is not INamedTypeSymbol typeSymbol)
             return null;
 
+        var diagnostics = ImmutableArray.CreateBuilder<Diagnostic>();
+        var typeLocation = typeSymbol.Locations.FirstOrDefault();
+        var displayName = typeSymbol.ToDisplayString();
+
+        if (typeSymbol.IsAbstract)
+            AddTypeDiagnostic("abstract types cannot be instantiated");
+
+        if (typeSymbol.ContainingType is not null)
+            AddTypeDiagnostic("nested types are not supported");
+
+        if (typeSymbol.Arity != 0)
+            AddTypeDiagnostic("generic types are not supported");
+
+        var generatedTypeName = $"{typeSymbol.Name}ChangesetApplier";
+        var generatedRegistrarName = $"{generatedTypeName}Registrar";
+        if (typeSymbol.ContainingNamespace.GetTypeMembers(generatedTypeName).Length != 0 ||
+            typeSymbol.ContainingNamespace.GetTypeMembers(generatedRegistrarName).Length != 0)
+        {
+            AddTypeDiagnostic(
+                $"the generated type name '{generatedTypeName}' or '{generatedRegistrarName}' is already in use");
+        }
+
+        var parameterlessConstructor = typeSymbol.InstanceConstructors.FirstOrDefault(
+            constructor => constructor.Parameters.Length == 0 &&
+                constructor.DeclaredAccessibility is Accessibility.Public
+                    or Accessibility.Internal
+                    or Accessibility.ProtectedOrInternal);
+        if (parameterlessConstructor is null)
+            AddTypeDiagnostic("an accessible parameterless constructor is required");
+
         var properties = new List<PropertyInfo>();
         var seen = new HashSet<string>();
         for (var type = typeSymbol; type is not null && type.SpecialType != SpecialType.System_Object; type = type.BaseType)
         {
             foreach (var member in type.GetMembers())
             {
-                if (member is IPropertySymbol prop &&
-                    prop.DeclaredAccessibility == Accessibility.Public &&
-                    !prop.IsReadOnly &&
-                    !prop.IsStatic &&
-                    prop.SetMethod is not null &&
-                    seen.Add(prop.Name))
+                if (member is not IPropertySymbol prop ||
+                    prop.DeclaredAccessibility != Accessibility.Public ||
+                    prop.IsStatic ||
+                    !seen.Add(prop.Name))
+                    continue;
+
+                string? reason = null;
+                if (prop.IsIndexer)
+                    reason = "indexers cannot be changeset fields";
+                else if (prop.IsRequired)
+                    reason = "required members cannot be initialized by the generated applier";
+                else if (prop.SetMethod is null)
+                    reason = "a setter is required";
+                else if (prop.SetMethod.IsInitOnly)
+                    reason = "init-only properties cannot be assigned by the generated applier";
+                else if (!IsAccessible(prop.SetMethod.DeclaredAccessibility))
+                    reason = "the setter must be accessible from generated code";
+                else if (prop.GetMethod is null || !IsAccessible(prop.GetMethod.DeclaredAccessibility))
+                    reason = "the getter must be accessible from generated code";
+
+                if (reason is not null)
                 {
-                    properties.Add(new PropertyInfo(
+                    diagnostics.Add(Diagnostic.Create(
+                        UnsupportedProperty,
+                        prop.Locations.FirstOrDefault() ?? typeLocation,
                         prop.Name,
-                        prop.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)));
+                        displayName,
+                        reason));
+                    continue;
                 }
+
+                properties.Add(new PropertyInfo(
+                    prop.Name,
+                    prop.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)));
             }
         }
-
-        if (properties.Count == 0)
-            return null;
 
         var ns = typeSymbol.ContainingNamespace.IsGlobalNamespace
             ? null
@@ -69,8 +141,23 @@ public class ChangesetGenerator : IIncrementalGenerator
             typeSymbol.Name,
             ns,
             typeSymbol.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat),
-            properties.ToImmutableArray());
+            properties.ToImmutableArray(),
+            diagnostics.ToImmutable());
+
+        void AddTypeDiagnostic(string reason)
+        {
+            diagnostics.Add(Diagnostic.Create(
+                UnsupportedType,
+                typeLocation,
+                displayName,
+                reason));
+        }
     }
+
+    private static bool IsAccessible(Accessibility accessibility) =>
+        accessibility is Accessibility.Public
+            or Accessibility.Internal
+            or Accessibility.ProtectedOrInternal;
 
     private static string GenerateSource(ModelInfo model)
     {
@@ -156,13 +243,20 @@ internal class ModelInfo
     public string? Namespace { get; }
     public string FullName { get; }
     public ImmutableArray<PropertyInfo> Properties { get; }
+    public ImmutableArray<Diagnostic> Diagnostics { get; }
 
-    public ModelInfo(string typeName, string? ns, string fullName, ImmutableArray<PropertyInfo> properties)
+    public ModelInfo(
+        string typeName,
+        string? ns,
+        string fullName,
+        ImmutableArray<PropertyInfo> properties,
+        ImmutableArray<Diagnostic> diagnostics)
     {
         TypeName = typeName;
         Namespace = ns;
         FullName = fullName;
         Properties = properties;
+        Diagnostics = diagnostics;
     }
 }
 
