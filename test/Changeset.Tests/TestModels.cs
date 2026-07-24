@@ -61,6 +61,28 @@ public class NoDefaultConstructor
     public string Email { get; set; } = "";
 }
 
+public class CoercionTarget
+{
+    public int IntValue { get; set; }
+    public long LongValue { get; set; }
+    public double DoubleValue { get; set; }
+    public float FloatValue { get; set; }
+    public decimal DecimalValue { get; set; }
+    public bool BoolValue { get; set; }
+    public DateTime DateTimeValue { get; set; }
+    public DateTimeOffset DateTimeOffsetValue { get; set; }
+    public DateOnly DateOnlyValue { get; set; }
+    public TimeOnly TimeOnlyValue { get; set; }
+    public Guid GuidValue { get; set; }
+    public UserRole EnumValue { get; set; }
+    public int? NullableIntValue { get; set; }
+    public decimal? NullableDecimalValue { get; set; }
+    public DateTime? NullableDateTimeValue { get; set; }
+    public Guid? NullableGuidValue { get; set; }
+    public UserRole? NullableEnumValue { get; set; }
+    public string StringValue { get; set; } = "";
+}
+
 public enum UserRole
 {
     Guest,

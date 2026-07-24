@@ -1,0 +1,161 @@
+namespace Changeset
+{
+    public static class AssocExtensions
+    {
+        public static Changeset.Changeset<T> CastAssoc<T, TAssoc>(this Changeset.Changeset<T> changeset, string field, System.Collections.Generic.IReadOnlyList<string> permitted, Changeset.CastOptions? options = null)
+            where T :  class
+            where TAssoc :  class { }
+        public static Changeset.Changeset<TAssoc>? GetAssoc<T, TAssoc>(this Changeset.Changeset<T> changeset, string field)
+            where T :  class
+            where TAssoc :  class { }
+        public static Changeset.Changeset<T> ValidateAssoc<T, TAssoc>(this Changeset.Changeset<T> changeset, string field, System.Func<Changeset.Changeset<TAssoc>, Changeset.Changeset<TAssoc>> validator)
+            where T :  class
+            where TAssoc :  class { }
+    }
+    public sealed class CastOptions : System.IEquatable<Changeset.CastOptions>
+    {
+        public CastOptions() { }
+        public bool CaseInsensitiveFields { get; init; }
+        public System.IFormatProvider? FormatProvider { get; init; }
+        public bool StrictCasting { get; init; }
+        public bool TrimStrings { get; init; }
+        public static Changeset.CastOptions Default { get; }
+    }
+    public enum ChangesetAction
+    {
+        Insert = 0,
+        Update = 1,
+    }
+    public static class ChangesetApplierRegistry
+    {
+        public static Changeset.IChangesetApplier<T>? Get<T>()
+            where T :  class { }
+        public static void Register<T>(Changeset.IChangesetApplier<T> applier)
+            where T :  class { }
+    }
+    public sealed class ChangesetError : System.IEquatable<Changeset.ChangesetError>
+    {
+        public ChangesetError(string Field, string Message, string Code, System.Collections.Immutable.ImmutableDictionary<string, object>? Metadata = null) { }
+        public string Code { get; init; }
+        public string Field { get; init; }
+        public string Message { get; init; }
+        public System.Collections.Immutable.ImmutableDictionary<string, object>? Metadata { get; init; }
+        public static Changeset.ChangesetError Base(string message, string code) { }
+        public static Changeset.ChangesetError For(string field, string message, string code) { }
+        public static Changeset.ChangesetError For(string field, string message, string code, System.Collections.Immutable.ImmutableDictionary<string, object> metadata) { }
+    }
+    public static class ChangesetExtensions
+    {
+        public static T ApplyChanges<T>(this Changeset.Changeset<T> changeset)
+            where T :  class, new () { }
+        public static T ApplyChanges<T>(this Changeset.Changeset<T> changeset, System.Func<T> factory)
+            where T :  class { }
+        public static Changeset.ChangesetResult<T> ToResult<T>(this Changeset.Changeset<T> changeset)
+            where T :  class, new () { }
+        public static Changeset.ChangesetResult<T> ToResult<T>(this Changeset.Changeset<T> changeset, System.Func<T> factory)
+            where T :  class { }
+    }
+    public abstract class ChangesetResult<T> : System.IEquatable<Changeset.ChangesetResult<T>>
+        where T :  class
+    {
+        public sealed class Invalid : Changeset.ChangesetResult<T>, System.IEquatable<Changeset.ChangesetResult<T>.Invalid>
+        {
+            public Invalid(System.Collections.Immutable.ImmutableArray<Changeset.ChangesetError> Errors) { }
+            public System.Collections.Immutable.ImmutableArray<Changeset.ChangesetError> Errors { get; init; }
+        }
+        public sealed class Valid : Changeset.ChangesetResult<T>, System.IEquatable<Changeset.ChangesetResult<T>.Valid>
+        {
+            public Valid(T Value) { }
+            public T Value { get; init; }
+        }
+    }
+    [System.AttributeUsage(System.AttributeTargets.Class, AllowMultiple=false, Inherited=false)]
+    public sealed class ChangesetTargetAttribute : System.Attribute
+    {
+        public ChangesetTargetAttribute() { }
+    }
+    public sealed class Changeset<T> : System.IEquatable<Changeset.Changeset<T>>
+        where T :  class
+    {
+        public Changeset.ChangesetAction Action { get; init; }
+        public System.Collections.Immutable.ImmutableArray<Changeset.ChangesetError> BaseErrors { get; }
+        public System.Collections.Immutable.ImmutableHashSet<string> CastFields { get; init; }
+        public System.Collections.Immutable.ImmutableDictionary<string, object?> Changes { get; init; }
+        public T Data { get; init; }
+        public System.Collections.Immutable.ImmutableDictionary<string, System.Collections.Immutable.ImmutableArray<Changeset.ChangesetError>> ErrorMap { get; }
+        public System.Collections.Immutable.ImmutableArray<Changeset.ChangesetError> Errors { get; init; }
+        public bool IsValid { get; }
+        public System.Collections.Immutable.ImmutableDictionary<string, object?> Params { get; init; }
+        public Changeset.Changeset<T> AddBaseError(string message, string code) { }
+        public Changeset.Changeset<T> AddError(string field, string message, string code) { }
+        public Changeset.Changeset<T> AddError(string field, string message, string code, System.Collections.Immutable.ImmutableDictionary<string, object> metadata) { }
+        public System.Collections.Immutable.ImmutableArray<Changeset.ChangesetError> ErrorsOn(string field) { }
+        public TValue? GetChange<TValue>(string field) { }
+        public bool HasErrorOn(string field) { }
+        public static Changeset.Changeset<T> Cast(System.Collections.Generic.IReadOnlyDictionary<string, object?> @params, System.Collections.Generic.IReadOnlyList<string> permitted, Changeset.CastOptions? options = null) { }
+        public static Changeset.Changeset<T> Cast(System.Collections.Generic.IReadOnlyDictionary<string, object?> @params, System.Linq.Expressions.Expression<System.Func<T, object>> fields, Changeset.CastOptions? options = null) { }
+        public static Changeset.Changeset<T> Cast(T data, System.Collections.Generic.IReadOnlyDictionary<string, object?> @params, System.Collections.Generic.IReadOnlyList<string> permitted, Changeset.CastOptions? options = null) { }
+        public static Changeset.Changeset<T> Cast(T data, System.Collections.Generic.IReadOnlyDictionary<string, object?> @params, System.Linq.Expressions.Expression<System.Func<T, object>> fields, Changeset.CastOptions? options = null) { }
+    }
+    public interface IChangesetApplier<T>
+        where T :  class
+    {
+        System.Collections.Generic.IReadOnlySet<string> ValidFields { get; }
+        T Apply(T source, System.Collections.Generic.IReadOnlyDictionary<string, object?> changes);
+        T Create(System.Collections.Generic.IReadOnlyDictionary<string, object?> changes);
+    }
+}
+namespace Changeset.Validators
+{
+    public static class ValidatorExtensions
+    {
+        public static Changeset.Changeset<T> Validate<T>(this Changeset.Changeset<T> changeset, System.Func<Changeset.Changeset<T>, Changeset.Changeset<T>> validator)
+            where T :  class { }
+        public static System.Threading.Tasks.Task<Changeset.Changeset<T>> ValidateAsync<T>(this System.Threading.Tasks.Task<Changeset.Changeset<T>> changesetTask, System.Func<Changeset.Changeset<T>, Changeset.Changeset<T>> validator)
+            where T :  class { }
+        public static Changeset.Changeset<T> ValidateChange<T>(this Changeset.Changeset<T> changeset, string field, System.Func<Changeset.Changeset<T>, object?, Changeset.Changeset<T>> validator)
+            where T :  class { }
+        public static Changeset.Changeset<T> ValidateChange<T, TValue>(this Changeset.Changeset<T> changeset, System.Linq.Expressions.Expression<System.Func<T, TValue>> field, System.Func<Changeset.Changeset<T>, object?, Changeset.Changeset<T>> validator)
+            where T :  class { }
+        public static System.Threading.Tasks.Task<Changeset.Changeset<T>> ValidateChangeAsync<T>(this Changeset.Changeset<T> changeset, string field, System.Func<Changeset.Changeset<T>, object?, System.Threading.Tasks.Task<Changeset.Changeset<T>>> validator)
+            where T :  class { }
+        public static System.Threading.Tasks.Task<Changeset.Changeset<T>> ValidateChangeAsync<T>(this System.Threading.Tasks.Task<Changeset.Changeset<T>> changesetTask, string field, System.Func<Changeset.Changeset<T>, object?, System.Threading.Tasks.Task<Changeset.Changeset<T>>> validator)
+            where T :  class { }
+        public static System.Threading.Tasks.Task<Changeset.Changeset<T>> ValidateChangeAsync<T, TValue>(this Changeset.Changeset<T> changeset, System.Linq.Expressions.Expression<System.Func<T, TValue>> field, System.Func<Changeset.Changeset<T>, object?, System.Threading.Tasks.Task<Changeset.Changeset<T>>> validator)
+            where T :  class { }
+        public static System.Threading.Tasks.Task<Changeset.Changeset<T>> ValidateChangeAsync<T, TValue>(this System.Threading.Tasks.Task<Changeset.Changeset<T>> changesetTask, System.Linq.Expressions.Expression<System.Func<T, TValue>> field, System.Func<Changeset.Changeset<T>, object?, System.Threading.Tasks.Task<Changeset.Changeset<T>>> validator)
+            where T :  class { }
+        public static Changeset.Changeset<T> ValidateConfirmation<T>(this Changeset.Changeset<T> changeset, string field, string? message = null)
+            where T :  class { }
+        public static Changeset.Changeset<T> ValidateConfirmation<T, TValue>(this Changeset.Changeset<T> changeset, System.Linq.Expressions.Expression<System.Func<T, TValue>> field, string? message = null)
+            where T :  class { }
+        public static Changeset.Changeset<T> ValidateExclusion<T>(this Changeset.Changeset<T> changeset, string field, System.Collections.Generic.IReadOnlyList<object> values, string? message = null)
+            where T :  class { }
+        public static Changeset.Changeset<T> ValidateExclusion<T, TValue>(this Changeset.Changeset<T> changeset, System.Linq.Expressions.Expression<System.Func<T, TValue>> field, System.Collections.Generic.IReadOnlyCollection<TValue> values, string? message = null)
+            where T :  class { }
+        public static Changeset.Changeset<T> ValidateFormat<T>(this Changeset.Changeset<T> changeset, string field, System.Text.RegularExpressions.Regex regex, string? message = null)
+            where T :  class { }
+        public static Changeset.Changeset<T> ValidateFormat<T>(this Changeset.Changeset<T> changeset, string field, string pattern, string? message = null)
+            where T :  class { }
+        public static Changeset.Changeset<T> ValidateFormat<T, TValue>(this Changeset.Changeset<T> changeset, System.Linq.Expressions.Expression<System.Func<T, TValue>> field, System.Text.RegularExpressions.Regex regex, string? message = null)
+            where T :  class { }
+        public static Changeset.Changeset<T> ValidateFormat<T, TValue>(this Changeset.Changeset<T> changeset, System.Linq.Expressions.Expression<System.Func<T, TValue>> field, string pattern, string? message = null)
+            where T :  class { }
+        public static Changeset.Changeset<T> ValidateInclusion<T>(this Changeset.Changeset<T> changeset, string field, System.Collections.Generic.IReadOnlyList<object> values, string? message = null)
+            where T :  class { }
+        public static Changeset.Changeset<T> ValidateInclusion<T, TValue>(this Changeset.Changeset<T> changeset, System.Linq.Expressions.Expression<System.Func<T, TValue>> field, System.Collections.Generic.IReadOnlyCollection<TValue> values, string? message = null)
+            where T :  class { }
+        public static Changeset.Changeset<T> ValidateLength<T>(this Changeset.Changeset<T> changeset, string field, int? min = default, int? max = default, int? is = default, string? message = null)
+            where T :  class { }
+        public static Changeset.Changeset<T> ValidateLength<T, TValue>(this Changeset.Changeset<T> changeset, System.Linq.Expressions.Expression<System.Func<T, TValue>> field, int? min = default, int? max = default, int? is = default, string? message = null)
+            where T :  class { }
+        public static Changeset.Changeset<T> ValidateNumber<T>(this Changeset.Changeset<T> changeset, string field, System.IComparable? greaterThan = null, System.IComparable? greaterThanOrEqual = null, System.IComparable? lessThan = null, System.IComparable? lessThanOrEqual = null, System.IComparable? equalTo = null, string? message = null)
+            where T :  class { }
+        public static Changeset.Changeset<T> ValidateNumber<T, TValue>(this Changeset.Changeset<T> changeset, System.Linq.Expressions.Expression<System.Func<T, TValue>> field, System.IComparable? greaterThan = null, System.IComparable? greaterThanOrEqual = null, System.IComparable? lessThan = null, System.IComparable? lessThanOrEqual = null, System.IComparable? equalTo = null, string? message = null)
+            where T :  class { }
+        public static Changeset.Changeset<T> ValidateRequired<T>(this Changeset.Changeset<T> changeset, System.Collections.Generic.IReadOnlyList<string> fields)
+            where T :  class { }
+        public static Changeset.Changeset<T> ValidateRequired<T>(this Changeset.Changeset<T> changeset, System.Linq.Expressions.Expression<System.Func<T, object>> fields)
+            where T :  class { }
+    }
+}

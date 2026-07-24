@@ -13,7 +13,12 @@ changes before anything touches a model or database. Targets .NET 10;
 - `src/Changeset.EntityFramework` — EF Core / ASP.NET Core integration.
 - `src/Changeset.Generators` — source generator (generated appliers,
   string-field diagnostics).
-- `test/` — one xUnit test project per `src/` project.
+- `test/` — one xUnit test project per `src/` project, plus
+  `Changeset.PublicApi.Tests` (public API approval tests; if a test fails after
+  an intentional API change, copy the `.received.txt` over the approved file
+  in `test/Changeset.PublicApi.Tests/approved/` and commit it).
+- `bench/Changeset.Benchmarks` — BenchmarkDotNet benchmarks (built by CI, not
+  executed).
 - `samples/Changeset.Sample.WebApi` — sample ASP.NET Core app.
 - `docs/` — MkDocs documentation sources (`mkdocs.yml` at repo root).
 - `tools/generate-llm-docs.py` — generates `docs/llms.txt` and
@@ -23,8 +28,12 @@ changes before anything touches a model or database. Targets .NET 10;
 
 ```sh
 dotnet build          # warnings are errors
-dotnet test           # full suite, all three test projects
+dotnet test           # full suite, all test projects
 ```
+
+CI additionally runs `dotnet test /p:CollectCoverage=true`, which enforces
+per-package line-coverage thresholds (set in the test project files); a drop
+below a threshold fails the build.
 
 ## Testing requirements
 

@@ -1,0 +1,36 @@
+namespace Changeset.EntityFramework
+{
+    public static class AspNetCoreExtensions
+    {
+        public static void AddToModelState<T>(this Changeset.Changeset<T> changeset, Microsoft.AspNetCore.Mvc.ModelBinding.ModelStateDictionary modelState)
+            where T :  class { }
+        public static Microsoft.AspNetCore.Http.HttpValidationProblemDetails ToProblemDetails<T>(this Changeset.Changeset<T> changeset)
+            where T :  class { }
+        public static System.Collections.Generic.IDictionary<string, string[]> ToValidationErrors(this System.Collections.Immutable.ImmutableArray<Changeset.ChangesetError> errors) { }
+        public static System.Collections.Generic.IDictionary<string, string[]> ToValidationErrors<T>(this Changeset.Changeset<T> changeset)
+            where T :  class { }
+        public static Microsoft.AspNetCore.Http.IResult? ToValidationProblemOrNull<T>(this Changeset.Changeset<T> changeset)
+            where T :  class { }
+    }
+    public static class DbContextExtensions
+    {
+        public static T ApplyTo<T>(this Changeset.Changeset<T> changeset, Microsoft.EntityFrameworkCore.DbContext context)
+            where T :  class, new () { }
+        public static System.Threading.Tasks.Task<T> ApplyToAsync<T>(this Changeset.Changeset<T> changeset, Microsoft.EntityFrameworkCore.DbContext context, System.Threading.CancellationToken cancellationToken = default)
+            where T :  class, new () { }
+        public static System.Threading.Tasks.Task<Changeset.ChangesetResult<T>> TryApplyToAsync<T>(this Changeset.Changeset<T> changeset, Microsoft.EntityFrameworkCore.DbContext context, System.Func<Microsoft.EntityFrameworkCore.DbUpdateException, Changeset.ChangesetError?> mapSaveError, System.Threading.CancellationToken cancellationToken = default)
+            where T :  class, new () { }
+        public static Changeset.Changeset<T> ValidateUnique<T>(this Changeset.Changeset<T> changeset, System.Collections.Generic.IReadOnlyList<string> fields, Microsoft.EntityFrameworkCore.DbContext context, string? message = null, System.Linq.Expressions.Expression<System.Func<T, bool>>? scope = null)
+            where T :  class { }
+        public static Changeset.Changeset<T> ValidateUnique<T>(this Changeset.Changeset<T> changeset, string field, Microsoft.EntityFrameworkCore.DbContext context, string? message = null, System.Linq.Expressions.Expression<System.Func<T, bool>>? scope = null)
+            where T :  class { }
+        public static Changeset.Changeset<T> ValidateUnique<T, TValue>(this Changeset.Changeset<T> changeset, System.Linq.Expressions.Expression<System.Func<T, TValue>> fields, Microsoft.EntityFrameworkCore.DbContext context, string? message = null, System.Linq.Expressions.Expression<System.Func<T, bool>>? scope = null)
+            where T :  class { }
+        public static System.Threading.Tasks.Task<Changeset.Changeset<T>> ValidateUniqueAsync<T>(this Changeset.Changeset<T> changeset, System.Collections.Generic.IReadOnlyList<string> fields, Microsoft.EntityFrameworkCore.DbContext context, string? message = null, System.Linq.Expressions.Expression<System.Func<T, bool>>? scope = null, System.Threading.CancellationToken cancellationToken = default)
+            where T :  class { }
+        public static System.Threading.Tasks.Task<Changeset.Changeset<T>> ValidateUniqueAsync<T>(this Changeset.Changeset<T> changeset, string field, Microsoft.EntityFrameworkCore.DbContext context, string? message = null, System.Linq.Expressions.Expression<System.Func<T, bool>>? scope = null, System.Threading.CancellationToken cancellationToken = default)
+            where T :  class { }
+        public static System.Threading.Tasks.Task<Changeset.Changeset<T>> ValidateUniqueAsync<T, TValue>(this Changeset.Changeset<T> changeset, System.Linq.Expressions.Expression<System.Func<T, TValue>> fields, Microsoft.EntityFrameworkCore.DbContext context, string? message = null, System.Linq.Expressions.Expression<System.Func<T, bool>>? scope = null, System.Threading.CancellationToken cancellationToken = default)
+            where T :  class { }
+    }
+}
