@@ -1,4 +1,7 @@
 <Solution>
+  <Folder Name="/bench/">
+    <Project Path="bench/Changeset.Benchmarks/Changeset.Benchmarks.csproj" />
+  </Folder>
   <Folder Name="/samples/">
     <Project Path="samples/Changeset.Sample.WebApi/Changeset.Sample.WebApi.csproj" />
   </Folder>
@@ -10,6 +13,7 @@
   <Folder Name="/test/">
     <Project Path="test/Changeset.EntityFramework.Tests/Changeset.EntityFramework.Tests.csproj" />
     <Project Path="test/Changeset.Generators.Tests/Changeset.Generators.Tests.csproj" />
+    <Project Path="test/Changeset.PublicApi.Tests/Changeset.PublicApi.Tests.csproj" />
     <Project Path="test/Changeset.Tests/Changeset.Tests.csproj" />
   </Folder>
 </Solution>
