@@ -91,46 +91,23 @@ public class ChangesetGenerator : IIncrementalGenerator
             AddTypeDiagnostic("an accessible parameterless constructor is required");
 
         var properties = new List<PropertyInfo>();
-        var seen = new HashSet<string>();
-        for (var type = typeSymbol; type is not null && type.SpecialType != SpecialType.System_Object; type = type.BaseType)
+        foreach (var prop in TargetPropertyInspector.GetPublicInstanceProperties(typeSymbol))
         {
-            foreach (var member in type.GetMembers())
+            var reason = TargetPropertyInspector.GetUnsupportedReason(prop);
+            if (reason is not null)
             {
-                if (member is not IPropertySymbol prop ||
-                    prop.DeclaredAccessibility != Accessibility.Public ||
-                    prop.IsStatic ||
-                    !seen.Add(prop.Name))
-                    continue;
-
-                string? reason = null;
-                if (prop.IsIndexer)
-                    reason = "indexers cannot be changeset fields";
-                else if (prop.IsRequired)
-                    reason = "required members cannot be initialized by the generated applier";
-                else if (prop.SetMethod is null)
-                    reason = "a setter is required";
-                else if (prop.SetMethod.IsInitOnly)
-                    reason = "init-only properties cannot be assigned by the generated applier";
-                else if (!IsAccessible(prop.SetMethod.DeclaredAccessibility))
-                    reason = "the setter must be accessible from generated code";
-                else if (prop.GetMethod is null || !IsAccessible(prop.GetMethod.DeclaredAccessibility))
-                    reason = "the getter must be accessible from generated code";
-
-                if (reason is not null)
-                {
-                    diagnostics.Add(Diagnostic.Create(
-                        UnsupportedProperty,
-                        prop.Locations.FirstOrDefault() ?? typeLocation,
-                        prop.Name,
-                        displayName,
-                        reason));
-                    continue;
-                }
-
-                properties.Add(new PropertyInfo(
+                diagnostics.Add(Diagnostic.Create(
+                    UnsupportedProperty,
+                    prop.Locations.FirstOrDefault() ?? typeLocation,
                     prop.Name,
-                    prop.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)));
+                    displayName,
+                    reason));
+                continue;
             }
+
+            properties.Add(new PropertyInfo(
+                prop.Name,
+                prop.Type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)));
         }
 
         var ns = typeSymbol.ContainingNamespace.IsGlobalNamespace
@@ -153,11 +130,6 @@ public class ChangesetGenerator : IIncrementalGenerator
                 reason));
         }
     }
-
-    private static bool IsAccessible(Accessibility accessibility) =>
-        accessibility is Accessibility.Public
-            or Accessibility.Internal
-            or Accessibility.ProtectedOrInternal;
 
     private static string GenerateSource(ModelInfo model)
     {
