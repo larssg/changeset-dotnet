@@ -8,9 +8,19 @@ using Microsoft.CodeAnalysis.Diagnostics;
 
 namespace Changeset.Generators;
 
+/// <summary>
+/// Analyzer that validates string literal field names passed to <c>Changeset.Cast</c> on
+/// <c>[ChangesetTarget]</c> types. Reports <c>CHGSET001</c> with a did-you-mean suggestion
+/// when a close match exists, or <c>CHGSET002</c> when a field name does not match any
+/// writable property on the target type. Case-insensitive matches are accepted.
+/// </summary>
 [DiagnosticAnalyzer(LanguageNames.CSharp)]
 public class FieldNameAnalyzer : DiagnosticAnalyzer
 {
+    /// <summary>
+    /// Diagnostic ID reported when a field name is not a writable property on the target
+    /// type but a close match exists to suggest.
+    /// </summary>
     public const string DiagnosticId = "CHGSET001";
 
     private static readonly DiagnosticDescriptor Rule = new(
@@ -31,9 +41,17 @@ public class FieldNameAnalyzer : DiagnosticAnalyzer
         isEnabledByDefault: true,
         description: "Field names passed to Changeset.Cast must match writable properties on the target type.");
 
+    /// <summary>
+    /// The diagnostics this analyzer can report: <c>CHGSET001</c> (invalid field name with
+    /// suggestion) and <c>CHGSET002</c> (unknown field name).
+    /// </summary>
     public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics =>
         ImmutableArray.Create(Rule, UnknownRule);
 
+    /// <summary>
+    /// Configures the analysis: skips generated code, enables concurrent execution, and
+    /// registers a syntax node action for invocation expressions.
+    /// </summary>
     public override void Initialize(AnalysisContext context)
     {
         context.ConfigureGeneratedCodeAnalysis(GeneratedCodeAnalysisFlags.None);

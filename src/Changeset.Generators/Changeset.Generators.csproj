@@ -7,7 +7,20 @@
     <EnforceExtendedAnalyzerRules>true</EnforceExtendedAnalyzerRules>
     <NoWarn>RS2008;RS1032</NoWarn>
     <IsRoslynComponent>true</IsRoslynComponent>
+    <Description>Source generator and analyzer for Changeset.NET: reflection-free changeset appliers for [ChangesetTarget] models and compile-time diagnostics for string-based field names.</Description>
+    <PackageTags>changeset;source-generator;analyzer;ecto</PackageTags>
+    <!-- Analyzer package: ship the assembly under analyzers/, not lib/. -->
+    <IncludeBuildOutput>false</IncludeBuildOutput>
+    <DevelopmentDependency>true</DevelopmentDependency>
+    <SuppressDependenciesWhenPacking>true</SuppressDependenciesWhenPacking>
+    <!-- No lib/ assemblies, so a symbols package would be empty; embed the PDB instead. -->
+    <IncludeSymbols>false</IncludeSymbols>
+    <DebugType>embedded</DebugType>
   </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="$(OutputPath)\$(AssemblyName).dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
+  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Microsoft.CodeAnalysis.Analyzers" Version="3.3.4" PrivateAssets="all" />

@@ -1,9 +1,11 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net10.0</TargetFramework>
+    <TargetFrameworks>net8.0;net10.0</TargetFrameworks>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <Description>EF Core and ASP.NET Core integration for Changeset.NET: apply changesets to tracked entities, database-backed uniqueness validation, constraint-violation mapping, and ValidationProblem responses.</Description>
+    <PackageTags>changeset;validation;entity-framework;efcore;aspnetcore;ecto</PackageTags>
   </PropertyGroup>
 
   <ItemGroup>
@@ -12,7 +14,8 @@
 
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.10" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="8.0.29" Condition="'$(TargetFramework)' == 'net8.0'" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.10" Condition="'$(TargetFramework)' == 'net10.0'" />
   </ItemGroup>
 
 </Project>

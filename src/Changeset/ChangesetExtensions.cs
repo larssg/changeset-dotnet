@@ -3,6 +3,9 @@ using System.Reflection;
 
 namespace Changeset;
 
+/// <summary>
+/// Extension methods for applying a valid changeset's changes to a model instance.
+/// </summary>
 public static class ChangesetExtensions
 {
     private static readonly ConcurrentDictionary<Type, PropertyInfo[]> ReadWritePropertyCache = new();
@@ -30,6 +33,13 @@ public static class ChangesetExtensions
         });
     }
 
+    /// <summary>
+    /// Applies the changeset's changes and returns the resulting model: a shallow clone
+    /// of the existing data with changes on top for updates, or a new instance for inserts.
+    /// Uses a generated <see cref="IChangesetApplier{T}"/> when registered, otherwise reflection.
+    /// The original <see cref="Changeset{T}.Data"/> is never mutated.
+    /// </summary>
+    /// <exception cref="InvalidOperationException">The changeset has errors.</exception>
     public static T ApplyChanges<T>(this Changeset<T> changeset) where T : class, new()
     {
         if (!changeset.IsValid)
@@ -56,6 +66,14 @@ public static class ChangesetExtensions
         return target;
     }
 
+    /// <summary>
+    /// Applies the changeset's changes using a factory to create new instances, for model
+    /// types without a parameterless constructor. Updates shallow-clone the existing data;
+    /// inserts call <paramref name="factory"/>.
+    /// </summary>
+    /// <param name="changeset">The changeset to apply. Must be valid.</param>
+    /// <param name="factory">Creates the target instance when there is no existing data.</param>
+    /// <exception cref="InvalidOperationException">The changeset has errors.</exception>
     public static T ApplyChanges<T>(
         this Changeset<T> changeset, Func<T> factory) where T : class
     {
@@ -74,6 +92,11 @@ public static class ChangesetExtensions
         return target;
     }
 
+    /// <summary>
+    /// Converts the changeset into a <see cref="ChangesetResult{T}"/>: applies the changes
+    /// and returns <see cref="ChangesetResult{T}.Valid"/> when valid, otherwise
+    /// <see cref="ChangesetResult{T}.Invalid"/> with the errors.
+    /// </summary>
     public static ChangesetResult<T> ToResult<T>(this Changeset<T> changeset) where T : class, new()
     {
         if (changeset.IsValid)
@@ -82,6 +105,12 @@ public static class ChangesetExtensions
         return new ChangesetResult<T>.Invalid(changeset.Errors);
     }
 
+    /// <summary>
+    /// Converts the changeset into a <see cref="ChangesetResult{T}"/> using a factory to
+    /// create new instances, for model types without a parameterless constructor.
+    /// </summary>
+    /// <param name="changeset">The changeset to convert.</param>
+    /// <param name="factory">Creates the target instance when there is no existing data.</param>
     public static ChangesetResult<T> ToResult<T>(
         this Changeset<T> changeset, Func<T> factory) where T : class
     {

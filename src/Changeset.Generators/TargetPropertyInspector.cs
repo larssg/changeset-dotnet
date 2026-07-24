@@ -3,8 +3,17 @@ using Microsoft.CodeAnalysis;
 
 namespace Changeset.Generators;
 
+/// <summary>
+/// Shared helper for the generator and analyzer that discovers the public instance
+/// properties of a changeset target type and decides which of them can be changeset fields.
+/// </summary>
 internal static class TargetPropertyInspector
 {
+    /// <summary>
+    /// Enumerates the public instance properties of <paramref name="targetType"/> and its
+    /// base types (excluding <c>object</c>). Properties hidden by a derived declaration are
+    /// yielded once, using the most-derived declaration.
+    /// </summary>
     public static IEnumerable<IPropertySymbol> GetPublicInstanceProperties(INamedTypeSymbol targetType)
     {
         var seen = new HashSet<string>();
@@ -26,6 +35,11 @@ internal static class TargetPropertyInspector
         }
     }
 
+    /// <summary>
+    /// Returns the reason a property cannot be a changeset field (indexer, required,
+    /// missing or init-only setter, or an inaccessible accessor), or null if the property
+    /// is supported.
+    /// </summary>
     public static string? GetUnsupportedReason(IPropertySymbol property)
     {
         if (property.IsIndexer)

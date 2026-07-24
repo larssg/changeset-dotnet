@@ -1,8 +1,8 @@
 # EF Core & ASP.NET Core
 
 The `Changeset.EntityFramework` package integrates changesets with EF Core
-persistence and ASP.NET Core validation responses. It targets .NET 10 and
-references the ASP.NET Core shared framework.
+persistence and ASP.NET Core validation responses. It targets .NET 8 and
+.NET 10 and references the ASP.NET Core shared framework.
 
 ```shell
 dotnet add package Changeset.EntityFramework

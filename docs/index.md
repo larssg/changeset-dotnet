@@ -44,7 +44,7 @@ state.
 | `Changeset.EntityFramework` | `ApplyTo`, uniqueness validation, Minimal API results, `ProblemDetails`, and `ModelState` helpers |
 | `Changeset.Generators` | Generated property appliers and diagnostics for string field lists passed to `Cast` |
 
-The core and EF Core packages target .NET 10.
+The core and EF Core packages target .NET 8 and .NET 10.
 
 ## Where to begin
 
