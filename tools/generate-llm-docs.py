@@ -29,7 +29,7 @@ PAGES = (
     Page("Validation", "validation.md", "Use built-in, custom, and asynchronous validators.", "Core concepts"),
     Page("Errors", "errors.md", "Inspect structured errors and map them to application responses.", "Core concepts"),
     Page("Applying Changes", "applying-changes.md", "Materialize valid inserts and updates and understand copy behavior.", "Core concepts"),
-    Page("Associations", "associations.md", "Cast and validate nested input, including current materialization limits.", "Core concepts"),
+    Page("Associations", "associations.md", "Cast, validate, and recursively materialize nested input.", "Core concepts"),
     Page("EF Core & ASP.NET Core", "ef-core.md", "Persist changes, validate uniqueness, and create HTTP responses.", "Integrations"),
     Page("Source Generator", "source-generator.md", "Use generated appliers and string-field diagnostics.", "Integrations"),
     Page("Recipes", "recipes.md", "Copy complete patterns for common application workflows.", "Reference"),

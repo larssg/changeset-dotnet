@@ -135,9 +135,9 @@ need a custom validator or query.
 `ApplyTo<T>` and `ApplyToAsync<T>` require `T : class, new()`. Inserts therefore
 need a public parameterless constructor.
 
-The integration applies scalar changes stored directly in `Changes`. It does
-not recursively persist child changesets created by `CastAssoc`; handle nested
-entities explicitly.
+The integration recursively applies child changesets created by `CastAssoc`.
+On updates, existing tracked child entities are retained and only their changed
+scalar properties are marked modified.
 
 ## ASP.NET Core
 

@@ -271,4 +271,70 @@ public class AssocTests
         Assert.True(cs.HasErrorOn("Address.City"));
         Assert.Equal("required", cs.ErrorsOn("Address.City")[0].Code);
     }
+
+    [Fact]
+    public void ApplyChanges_MaterializesNewAssociation()
+    {
+        var cs = Changeset<UserWithAddress>.Cast(
+                new Dictionary<string, object?>
+                {
+                    ["Name"] = "Alice",
+                    ["Address"] = new Dictionary<string, object?>
+                    {
+                        ["Street"] = "123 Main",
+                        ["City"] = "Springfield"
+                    }
+                },
+                ["Name"])
+            .CastAssoc<UserWithAddress, Address>("Address", ["Street", "City"]);
+
+        var user = cs.ApplyChanges();
+
+        Assert.NotNull(user.Address);
+        Assert.Equal("123 Main", user.Address.Street);
+        Assert.Equal("Springfield", user.Address.City);
+    }
+
+    [Fact]
+    public void ApplyChanges_UpdatesAssociationAndPreservesUnchangedData()
+    {
+        var existing = new UserWithAddress
+        {
+            Name = "Alice",
+            Address = new Address { Street = "Old", City = "Keep", Zip = "12345" }
+        };
+        var cs = Changeset<UserWithAddress>.Cast(
+                existing,
+                new Dictionary<string, object?>
+                {
+                    ["Address"] = new Dictionary<string, object?> { ["Street"] = "New" }
+                },
+                ["Name"])
+            .CastAssoc<UserWithAddress, Address>("Address", ["Street", "City", "Zip"]);
+
+        var user = cs.ApplyChanges();
+
+        Assert.NotSame(existing, user);
+        Assert.NotSame(existing.Address, user.Address);
+        Assert.Equal("New", user.Address!.Street);
+        Assert.Equal("Keep", user.Address.City);
+        Assert.Equal("12345", user.Address.Zip);
+        Assert.Equal("Old", existing.Address!.Street);
+    }
+
+    [Fact]
+    public void ApplyChanges_InvalidAssociationThrowsBeforeMaterialization()
+    {
+        var cs = Changeset<UserWithAddress>.Cast(
+                new Dictionary<string, object?>
+                {
+                    ["Address"] = new Dictionary<string, object?> { ["Street"] = "" }
+                },
+                ["Name"])
+            .CastAssoc<UserWithAddress, Address>("Address", ["Street"])
+            .ValidateAssoc<UserWithAddress, Address>("Address",
+                child => child.ValidateRequired(["Street"]));
+
+        Assert.Throws<InvalidOperationException>(() => cs.ApplyChanges());
+    }
 }
