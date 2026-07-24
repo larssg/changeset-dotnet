@@ -52,10 +52,32 @@ public static class ValidatorExtensions
         return changeset;
     }
 
+    public static Changeset<T> ValidateFormat<T>(
+        this Changeset<T> changeset, string field, Regex regex,
+        string? message = null) where T : class
+    {
+        if (!changeset.Changes.TryGetValue(field, out var value) || value is not string str)
+            return changeset;
+
+        if (!regex.IsMatch(str))
+            return changeset.AddError(field, message ?? "has invalid format", "format",
+                ImmutableDictionary.CreateRange(new[]
+                {
+                    KeyValuePair.Create<string, object>("pattern", regex.ToString())
+                }));
+
+        return changeset;
+    }
+
     public static Changeset<T> ValidateFormat<T, TValue>(
         this Changeset<T> changeset, Expression<Func<T, TValue>> field,
         string pattern, string? message = null) where T : class =>
         changeset.ValidateFormat(FieldName(field), pattern, message);
+
+    public static Changeset<T> ValidateFormat<T, TValue>(
+        this Changeset<T> changeset, Expression<Func<T, TValue>> field,
+        Regex regex, string? message = null) where T : class =>
+        changeset.ValidateFormat(FieldName(field), regex, message);
 
     public static Changeset<T> ValidateLength<T>(
         this Changeset<T> changeset, string field,

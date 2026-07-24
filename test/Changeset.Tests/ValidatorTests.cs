@@ -1,9 +1,13 @@
 using Changeset.Validators;
+using System.Text.RegularExpressions;
 
 namespace Changeset.Tests;
 
-public class ValidatorTests
+public partial class ValidatorTests
 {
+    [GeneratedRegex(@"^[^@]+@[^@]+\.[^@]+$")]
+    private static partial Regex EmailRegex();
+
     [Fact]
     public void ValidateRequired_Present_Passes()
     {
@@ -76,6 +80,18 @@ public class ValidatorTests
 
         Assert.False(cs.IsValid);
         Assert.Equal("format", cs.ErrorsOn("Email")[0].Code);
+    }
+
+    [Fact]
+    public void ValidateFormat_GeneratedRegex_UsesGeneratedRegex()
+    {
+        var cs = Changeset<User>.Cast(
+            new Dictionary<string, object?> { ["Email"] = "not-an-email" }, ["Email"])
+            .ValidateFormat(user => user.Email, EmailRegex());
+
+        Assert.False(cs.IsValid);
+        Assert.Equal(@"^[^@]+@[^@]+\.[^@]+$",
+            cs.ErrorsOn("Email")[0].Metadata!["pattern"]);
     }
 
     [Fact]

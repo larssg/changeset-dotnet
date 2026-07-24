@@ -135,9 +135,19 @@ ValidateFormat(
     string pattern,
     string? message = null);
 
+ValidateFormat(
+    string field,
+    Regex regex,
+    string? message = null);
+
 ValidateFormat<TValue>(
     Expression<Func<T, TValue>> field,
     string pattern,
+    string? message = null);
+
+ValidateFormat<TValue>(
+    Expression<Func<T, TValue>> field,
+    Regex regex,
     string? message = null);
 ```
 
