@@ -24,7 +24,7 @@
     <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" Version="10.0.10" Condition="'$(TargetFramework)' == 'net10.0'" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="9.0.18" Condition="'$(TargetFramework)' == 'net8.0'" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.10" Condition="'$(TargetFramework)' == 'net10.0'" />
-    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.7.0" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.8.1" />
     <!-- Lift the native SQLite bundle above the vulnerable transitive version
          (NU1903 / GHSA-2m69-gcr7-jv3q) pulled in by Microsoft.EntityFrameworkCore.Sqlite. -->
     <PackageReference Include="SQLitePCLRaw.bundle_e_sqlite3" Version="2.1.12" />
